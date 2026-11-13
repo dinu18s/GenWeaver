@@ -1,0 +1,51 @@
+# Automated deployment of GeneWeaver to GitHub Pages
+name: Deploy static content to Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Prepare site directory
+        run: |
+          mkdir -p _site
+          if [ -d "GeneWeaver" ]; then
+            cp -r GeneWeaver/* _site/ || true
+            cp -r GeneWeaver/app/static/* _site/ || true
+          fi
+          if [ -d "app/static" ]; then
+            cp -r app/static/* _site/ || true
+          fi
+          if [ -f "index.html" ]; then
+            cp index.html _site/
+          fi
+          if [ ! -f "_site/index.html" ] && [ -f "GeneWeaver/app/static/index.html" ]; then
+            cp GeneWeaver/app/static/index.html _site/
+          fi
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

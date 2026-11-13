@@ -1,0 +1,32 @@
+{
+  "timestamp": 1794415889.0748305,
+  "torch_version": "2.15.0+cpu",
+  "cuda_available": false,
+  "cpu_results": [
+    {
+      "batch_size": 10000,
+      "gemm_latency_ms": 1.916,
+      "gemm_kmers_per_sec": 52202965.1,
+      "e2e_latency_ms": 4.871,
+      "e2e_kmers_per_sec": 2052983.4,
+      "device": "CPU (10 threads, PyTorch Vectorized)"
+    },
+    {
+      "batch_size": 50000,
+      "gemm_latency_ms": 1.916,
+      "gemm_kmers_per_sec": 52202965.1,
+      "e2e_latency_ms": 24.609,
+      "e2e_kmers_per_sec": 2031811.7,
+      "device": "CPU (10 threads, PyTorch Vectorized)"
+    },
+    {
+      "batch_size": 100000,
+      "gemm_latency_ms": 1.916,
+      "gemm_kmers_per_sec": 52202965.1,
+      "e2e_latency_ms": 51.799,
+      "e2e_kmers_per_sec": 1930542.9,
+      "device": "CPU (10 threads, PyTorch Vectorized)"
+    }
+  ],
+  "cuda_results": null
+}
