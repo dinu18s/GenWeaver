@@ -15,6 +15,7 @@
             brand: {
               50: '#f0fdf4',
               100: '#dcfce7',
+              400: '#4ade80',
               500: '#22c55e',
               600: '#16a34a',
               700: '#15803d',
@@ -38,84 +39,194 @@
     }
     .pulse-subtle { animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    @keyframes highlight-flash {
+      0% { border-color: #06b6d4; box-shadow: 0 0 15px rgba(6, 182, 212, 0.5); }
+      100% { border-color: #334155; box-shadow: none; }
+    }
+    .flash-highlight { animation: highlight-flash 1.2s ease-out; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white">
 
   <!-- Top Navigation Header -->
-  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-dna-cyan to-dna-purple flex items-center justify-center shadow-lg shadow-brand-500/20">
           <i class="fa-solid fa-dna text-white text-lg"></i>
         </div>
         <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-brand-400 bg-clip-text text-transparent">GeneWeaver</h1>
-            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">v1.0</span>
-          </div>
-          <p class="text-xs text-slate-400">High-Performance CRISPR-Cas9 Tensor Alignment Engine</p>
+          <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+            GeneWeaver
+          </span>
+          <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 uppercase tracking-wider">
+            CRISPR Alignment Engine
+          </span>
         </div>
       </div>
 
-      <!-- System Telemetry Badge -->
-      <div class="flex items-center space-x-4">
-        <div id="telemetryBadge" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
-          <span id="telemetryDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          <span class="text-slate-300">Engine:</span>
-          <span id="telemetryDevice" class="font-semibold text-brand-400 mono">Detecting...</span>
+      <!-- Header Status & Actions -->
+      <div class="flex items-center space-x-3 text-xs">
+        <div id="telemetryBadge" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60">
+          <span id="telemetryDot" class="w-2 h-2 rounded-full bg-emerald-400 pulse-subtle"></span>
+          <span class="text-slate-400">Device:</span>
+          <span id="telemetryDevice" class="font-mono text-slate-200 font-semibold">Detecting...</span>
         </div>
-        <button onclick="openBenchmarkModal()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center space-x-1.5">
+        <button 
+          onclick="openBenchmarkModal()" 
+          class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center space-x-1.5 font-medium"
+        >
           <i class="fa-solid fa-gauge-high text-dna-cyan"></i>
-          <span>Benchmarks</span>
+          <span>Benchmark</span>
         </button>
+        <a 
+          href="https://github.com/dinu18s/GenWeaver" 
+          target="_blank" 
+          class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center space-x-1.5 font-medium"
+        >
+          <i class="fa-brands fa-github text-slate-300"></i>
+          <span class="hidden md:inline">GitHub</span>
+        </a>
       </div>
     </div>
   </header>
 
-  <!-- GitHub Pages Notice Banner (Only shown in static mode) -->
-  <div id="staticModeBanner" class="hidden bg-gradient-to-r from-cyan-950/60 to-slate-900 border-b border-cyan-800/40 px-4 py-2 text-xs text-slate-300 text-center">
-    <span class="font-bold text-cyan-400"><i class="fa-solid fa-bolt mr-1"></i>Client-Side Static Mode Active:</span>
-    Running in-browser biophysical matching & scoring algorithms. For full multi-core/GPU backend acceleration, run GeneWeaver locally with <code class="mono bg-slate-800 px-1 py-0.5 rounded text-cyan-300">npm run dev</code>.
+  <!-- GitHub Pages / Client Engine Notification Banner (Auto-hidden if FastAPI is live) -->
+  <div id="staticModeBanner" class="hidden bg-gradient-to-r from-dna-cyan/15 via-slate-900 to-brand-500/15 border-b border-dna-cyan/20 px-4 py-2.5 text-xs text-slate-300">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-circle-info text-dna-cyan"></i>
+        <span><strong>Web Engine Active:</strong> Full in-browser CRISPR-Cas9 alignment & MIT/CFD scoring running at native speed.</span>
+      </div>
+      <span class="text-slate-400 hidden sm:inline">Connect local backend at <code>http://127.0.0.1:8000</code> for CUDA GPU mode.</span>
+    </div>
   </div>
 
-  <!-- Main Content Layout -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 w-full">
 
-    <!-- Configuration & Submission Grid -->
+    <!-- Top Grid: Input Controls (Left 7 Cols) & Live Pipeline Status (Right 5 Cols) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
       
-      <!-- Submission Form (Left 7 Cols) -->
-      <div class="lg:col-span-7 bg-slate-900/60 rounded-2xl border border-slate-800/80 p-6 shadow-xl backdrop-blur-sm space-y-6">
+      <!-- Query Submission Card (Left 7 Cols) -->
+      <div class="lg:col-span-7 bg-slate-900/60 rounded-2xl border border-slate-800/80 p-6 shadow-xl backdrop-blur-sm space-y-5">
+        
         <div class="flex items-center justify-between border-b border-slate-800 pb-4">
           <div class="flex items-center space-x-2">
             <i class="fa-solid fa-sliders text-brand-500"></i>
             <h2 class="text-lg font-semibold text-white">Target Query & Alignment Parameters</h2>
           </div>
-          <span class="text-xs text-slate-400">Validated Input</span>
+          <span class="text-xs text-slate-400">Validated 20-nt Input</span>
         </div>
 
-        <!-- Presets Bar -->
-        <div>
-          <label class="block text-xs font-medium text-slate-400 mb-2">Validated Benchmark Targets</label>
+        <!-- Presets & Feature 1: One-Click Safe vs. Risky vs. No-Fit Demo Tester -->
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+              <i class="fa-solid fa-vial text-brand-400"></i>
+              <span>One-Click Demos & Benchmark Presets</span>
+            </label>
+            <span class="text-[11px] text-slate-500">Click any preset to test</span>
+          </div>
+
+          <!-- Buttons Row: EMX1, Random + 3 One-Click Demo Buttons -->
           <div class="flex flex-wrap gap-2">
-            <button onclick="loadPreset('EMX1')" class="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition">
+            <!-- Safe Fit Button -->
+            <button 
+              type="button"
+              onclick="loadDemoScenario('safe')" 
+              class="px-3 py-1.5 text-xs rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 transition flex items-center space-x-1.5 font-semibold shadow-sm shadow-emerald-500/10"
+              title="Loads an exact 1-to-1 match with zero off-target look-alikes"
+            >
+              <i class="fa-solid fa-circle-check text-emerald-400"></i>
+              <span>Safe Fit</span>
+            </button>
+
+            <!-- Risky Look-Alike Button -->
+            <button 
+              type="button"
+              onclick="loadDemoScenario('risky')" 
+              class="px-3 py-1.5 text-xs rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition flex items-center space-x-1.5 font-semibold shadow-sm shadow-amber-500/10"
+              title="Loads a guide that matches multiple look-alike DNA sites with high cutting risk"
+            >
+              <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+              <span>Risky Look-Alike</span>
+            </button>
+
+            <!-- No Fit Button -->
+            <button 
+              type="button"
+              onclick="loadDemoScenario('nofit')" 
+              class="px-3 py-1.5 text-xs rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/40 transition flex items-center space-x-1.5 font-semibold shadow-sm shadow-rose-500/10"
+              title="Loads a sequence that has zero matching target locks or valid PAM motifs"
+            >
+              <i class="fa-solid fa-ban text-rose-400"></i>
+              <span>No Fit</span>
+            </button>
+
+            <!-- Divider -->
+            <div class="h-6 w-px bg-slate-800 self-center mx-0.5"></div>
+
+            <!-- Standard Benchmarks -->
+            <button 
+              type="button"
+              onclick="loadPreset('EMX1')" 
+              class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition"
+            >
               <span class="font-semibold text-brand-400">EMX1</span> (Hsu 2013)
             </button>
-            <button onclick="loadPreset('VEGFA')" class="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition">
+            <button 
+              type="button"
+              onclick="loadPreset('VEGFA')" 
+              class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition"
+            >
               <span class="font-semibold text-dna-cyan">VEGFA</span> Site 1
             </button>
-            <button onclick="loadPreset('FANCF')" class="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition">
-              <span class="font-semibold text-dna-purple">FANCF</span> Site 2
+            <button 
+              type="button"
+              onclick="generateRandomGrna()" 
+              class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition flex items-center space-x-1"
+            >
+              <i class="fa-solid fa-dice text-dna-purple"></i>
+              <span>Random 20-nt</span>
             </button>
+          </div>
+
+          <!-- Feature 1: Plain-English Demo Explanation Banner (Dynamic) -->
+          <div id="demoExplanationBanner" class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/70 transition-all duration-300">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start space-x-2.5">
+                <span id="demoIcon" class="text-base text-emerald-400 mt-0.5">
+                  <i class="fa-solid fa-circle-check"></i>
+                </span>
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <span id="demoTitle" class="text-xs font-bold text-white uppercase tracking-wider">Default Target: EMX1 Locus</span>
+                    <span id="demoBadge" class="px-2 py-0.2 text-[10px] font-semibold rounded bg-emerald-500/20 text-emerald-400">BENCHMARK</span>
+                  </div>
+                  <p id="demoDesc" class="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Standard 20-nt protospacer sequence for human EMX1 locus. Click <strong>Safe Fit</strong>, <strong>Risky Look-Alike</strong>, or <strong>No Fit</strong> above to test each scenario with full plain-English explanations.
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                id="demoRunBtn" 
+                onclick="submitAlignmentJob()" 
+                class="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold whitespace-nowrap shadow-sm shadow-brand-500/20 transition flex items-center space-x-1"
+              >
+                <i class="fa-solid fa-play text-[10px]"></i>
+                <span>Run Demo</span>
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- gRNA Input -->
         <div>
           <div class="flex items-center justify-between mb-1.5">
-            <label for="grnaInput" class="text-sm font-medium text-slate-200">20-nt Guide RNA (5' &rarr; 3')</label>
-            <span id="grnaLengthCounter" class="text-xs mono text-slate-400">20/20 nt</span>
+            <label for="grnaInput" class="text-sm font-medium text-slate-200">20-nt Guide RNA (Target Key 5' &rarr; 3')</label>
+            <span id="grnaLengthCounter" class="text-xs mono text-slate-400 font-semibold">20/20 nt</span>
           </div>
           <div class="relative">
             <input 
@@ -131,14 +242,14 @@
               <i class="fa-solid fa-circle-check"></i>
             </div>
           </div>
-          <p class="text-xs text-slate-500 mt-1.5">Standard 20-nt protospacer sequence without PAM motif.</p>
+          <p class="text-xs text-slate-500 mt-1.5">Rule: Must be exactly 20 letters using only nucleotides A, C, G, T.</p>
         </div>
 
         <!-- PAM & Mismatch Setting Row -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <!-- PAM Motif -->
           <div>
-            <label for="pamSelect" class="block text-sm font-medium text-slate-200 mb-1.5">PAM Motif (IUPAC)</label>
+            <label for="pamSelect" class="block text-sm font-medium text-slate-200 mb-1.5">PAM Motif (Lock Clasp)</label>
             <select id="pamSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
               <option value="NGG" selected>SpCas9 Canonical (NGG)</option>
               <option value="NAG">SpCas9 Non-canonical (NAG)</option>
@@ -149,7 +260,7 @@
           <!-- Mismatch Threshold -->
           <div>
             <div class="flex justify-between items-center mb-1.5">
-              <label for="mismatchRange" class="text-sm font-medium text-slate-200">Max Mismatches</label>
+              <label for="mismatchRange" class="text-sm font-medium text-slate-200">Max Mismatches Allowed</label>
               <span id="mismatchValBadge" class="px-2 py-0.5 text-xs font-bold rounded bg-brand-500/20 text-brand-400 mono">3 mm</span>
             </div>
             <input 
@@ -173,20 +284,41 @@
           </div>
         </div>
 
-        <!-- Target Genomic Reference -->
+        <!-- Target Genomic Reference & Feature 3: Custom "Test Lock" Builder -->
         <div>
-          <div class="flex justify-between items-center mb-1.5">
-            <label for="targetFasta" class="text-sm font-medium text-slate-200">Reference Genome / Sequence (FASTA)</label>
-            <button onclick="loadSampleFasta()" class="text-xs text-brand-400 hover:text-brand-300 flex items-center space-x-1">
-              <i class="fa-solid fa-file-import"></i>
-              <span>Load Chr19 Sample Snippet</span>
-            </button>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2">
+            <label for="targetFasta" class="text-sm font-medium text-slate-200 flex items-center space-x-1.5">
+              <i class="fa-solid fa-lock text-slate-400"></i>
+              <span>Reference Genome / Sequence (DNA Locks FASTA)</span>
+            </label>
+            
+            <div class="flex items-center space-x-2">
+              <!-- Feature 3 Button: Insert Test Lock -->
+              <button 
+                type="button" 
+                onclick="openTestLockModal()" 
+                class="px-2.5 py-1 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-dna-cyan border border-dna-cyan/40 transition flex items-center space-x-1.5 font-medium shadow-sm shadow-dna-cyan/10"
+                title="Assemble a custom 20-letter sequence + PAM and inject it directly into the FASTA"
+              >
+                <i class="fa-solid fa-key text-dna-cyan"></i>
+                <span>Insert Test Lock</span>
+              </button>
+              
+              <button 
+                type="button"
+                onclick="loadSampleFasta()" 
+                class="px-2.5 py-1 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-brand-400 border border-slate-700/60 transition flex items-center space-x-1"
+              >
+                <i class="fa-solid fa-file-import"></i>
+                <span>Load Chr19 Sample</span>
+              </button>
+            </div>
           </div>
           <textarea 
             id="targetFasta" 
             rows="5"
             placeholder=">chr19_locus&#10;GAGTCCGAGCAGAAGAAGAAGGGCTCGGCCCGGGCGCCCCTC..."
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-xs mono text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder-slate-700"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-xs mono text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder-slate-700 transition"
           ></textarea>
         </div>
 
@@ -261,24 +393,28 @@
           </div>
         </div>
 
-        <!-- Algorithmic Reference Card -->
+        <!-- Lock-and-Key Quick Guide Card -->
         <div class="bg-slate-900/60 rounded-2xl border border-slate-800/80 p-5 shadow-xl backdrop-blur-sm space-y-3">
           <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
-            <i class="fa-solid fa-book-bookmark text-dna-purple"></i>
-            <span>Algorithmic Architecture</span>
+            <i class="fa-solid fa-key text-dna-cyan"></i>
+            <span>How CRISPR "Lock & Key" Works</span>
           </h4>
-          <ul class="text-xs text-slate-300 space-y-2">
-            <li class="flex items-start space-x-2">
-              <i class="fa-solid fa-check text-brand-400 mt-0.5"></i>
-              <span><strong>One-Hot GEMM Matching:</strong> Encodes candidate k-mers into (N, 80) tensors; computes Hamming distances via matrix-vector multiplication.</span>
+          <ul class="text-xs text-slate-300 space-y-2.5">
+            <li class="flex items-start space-x-2.5">
+              <span class="text-brand-400 font-bold mt-0.5">1.</span>
+              <span><strong>The Key (20-nt gRNA):</strong> The guide RNA that guides Cas9 to search for matching DNA sequences.</span>
             </li>
-            <li class="flex items-start space-x-2">
-              <i class="fa-solid fa-check text-brand-400 mt-0.5"></i>
-              <span><strong>MIT Specificity Score:</strong> Multiplicative distance and positional weighting (Hsu et al., 2013).</span>
+            <li class="flex items-start space-x-2.5">
+              <span class="text-dna-purple font-bold mt-0.5">2.</span>
+              <span><strong>The Clasp (PAM):</strong> Cas9 first locks onto an <code>NGG</code> sequence in the DNA before testing if the key fits.</span>
             </li>
-            <li class="flex items-start space-x-2">
-              <i class="fa-solid fa-check text-brand-400 mt-0.5"></i>
-              <span><strong>CFD Score:</strong> Cutting Frequency Determination across 16 RNA:DNA nucleotide pairs & PAM affinities (Doench et al., 2016).</span>
+            <li class="flex items-start space-x-2.5">
+              <span class="text-amber-400 font-bold mt-0.5">3.</span>
+              <span><strong>The Seed Lock (Pos 13-20):</strong> Mismatches in these 8 letters prevent Cas9 from opening the DNA and cutting.</span>
+            </li>
+            <li class="flex items-start space-x-2.5">
+              <span class="text-dna-rose font-bold mt-0.5">4.</span>
+              <span><strong>Click Any Hit Row:</strong> Click any detected hit in the results table below to view the interactive <strong>Lock-and-Key Visual Fit Inspector</strong>!</span>
             </li>
           </ul>
         </div>
@@ -290,42 +426,118 @@
     <!-- Results Section (Visible after execution) -->
     <div id="resultsSection" class="space-y-6 hidden">
       
-      <!-- Key Risk Metrics -->
+      <!-- Feature 4: Plain-English Summary Banner with Simple vs. Technical Mode Toggle -->
+      <div id="summaryCard" class="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl backdrop-blur-sm space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div class="flex items-center space-x-3">
+            <div id="summaryStatusIcon" class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/40 shadow-sm shadow-emerald-500/20">
+              <i class="fa-solid fa-shield-check"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h3 class="text-sm font-bold text-white">Plain-English Alignment Takeaway</h3>
+                <span id="verdictPill" class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase tracking-wider">
+                  SAFE FIT
+                </span>
+              </div>
+              <p id="summaryTakeawayText" class="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                Loading summary...
+              </p>
+            </div>
+          </div>
+
+          <!-- Mode Toggle Switch: Simple Mode vs Technical Mode -->
+          <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800 self-start sm:self-auto shadow-inner">
+            <button 
+              type="button"
+              id="modeSimpleBtn" 
+              onclick="setViewMode('simple')" 
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white shadow transition flex items-center space-x-1.5"
+            >
+              <i class="fa-solid fa-user-check text-emerald-200"></i>
+              <span>Simple Mode</span>
+            </button>
+            <button 
+              type="button"
+              id="modeTechBtn" 
+              onclick="setViewMode('technical')" 
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5"
+            >
+              <i class="fa-solid fa-flask text-dna-cyan"></i>
+              <span>Technical Mode</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3 Plain-English Bullet Cards -->
+        <div id="summaryCardsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <!-- Card 1: Target Match Status -->
+          <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800 flex items-start space-x-2.5">
+            <div id="cardIcon1" class="text-emerald-400 mt-0.5 text-sm"><i class="fa-solid fa-bullseye"></i></div>
+            <div>
+              <div class="font-semibold text-slate-200" id="cardTitle1">On-Target Lock</div>
+              <div class="text-[11px] text-slate-400 mt-0.5" id="cardDesc1">1 exact match found</div>
+            </div>
+          </div>
+
+          <!-- Card 2: Off-Target Risk -->
+          <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800 flex items-start space-x-2.5">
+            <div id="cardIcon2" class="text-emerald-400 mt-0.5 text-sm"><i class="fa-solid fa-shield"></i></div>
+            <div>
+              <div class="font-semibold text-slate-200" id="cardTitle2">Look-Alike Threat</div>
+              <div class="text-[11px] text-slate-400 mt-0.5" id="cardDesc2">0 dangerous look-alikes</div>
+            </div>
+          </div>
+
+          <!-- Card 3: Clinical Recommendation -->
+          <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800 flex items-start space-x-2.5">
+            <div id="cardIcon3" class="text-emerald-400 mt-0.5 text-sm"><i class="fa-solid fa-circle-check"></i></div>
+            <div>
+              <div class="font-semibold text-slate-200" id="cardTitle3">Recommendation</div>
+              <div class="text-[11px] text-slate-400 mt-0.5" id="cardDesc3">Approved for safe gene editing</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Key Risk Metrics (Visible in Technical Mode or adapted in Simple Mode) -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-slate-900/80 border border-red-500/30 rounded-2xl p-4 shadow-lg shadow-red-500/5">
           <div class="flex items-center justify-between text-xs text-red-400">
-            <span>High Risk Hits</span>
+            <span id="labelHighRisk">High Risk Hits</span>
             <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
           </div>
           <div id="countHighRisk" class="text-2xl font-bold text-white mono mt-1">0</div>
-          <div class="text-[11px] text-slate-400 mt-0.5">CFD &ge; 0.50 or MIT &ge; 50</div>
+          <div id="subtextHighRisk" class="text-[11px] text-slate-400 mt-0.5">CFD &ge; 0.50 or MIT &ge; 50</div>
         </div>
 
         <div class="bg-slate-900/80 border border-amber-500/30 rounded-2xl p-4 shadow-lg shadow-amber-500/5">
           <div class="flex items-center justify-between text-xs text-amber-400">
-            <span>Medium Risk Hits</span>
+            <span id="labelMedRisk">Medium Risk Hits</span>
             <i class="fa-solid fa-circle-exclamation text-amber-500"></i>
           </div>
           <div id="countMedRisk" class="text-2xl font-bold text-white mono mt-1">0</div>
-          <div class="text-[11px] text-slate-400 mt-0.5">CFD &ge; 0.10 or MIT &ge; 20</div>
+          <div id="subtextMedRisk" class="text-[11px] text-slate-400 mt-0.5">CFD &ge; 0.10 or MIT &ge; 20</div>
         </div>
 
         <div class="bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-4 shadow-lg shadow-emerald-500/5">
           <div class="flex items-center justify-between text-xs text-emerald-400">
-            <span>Low Risk Hits</span>
+            <span id="labelLowRisk">Low Risk Hits</span>
             <i class="fa-solid fa-shield-halved text-emerald-500"></i>
           </div>
           <div id="countLowRisk" class="text-2xl font-bold text-white mono mt-1">0</div>
-          <div class="text-[11px] text-slate-400 mt-0.5">Tolerated mismatches</div>
+          <div id="subtextLowRisk" class="text-[11px] text-slate-400 mt-0.5">Tolerated mismatches</div>
         </div>
 
         <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg">
           <div class="flex items-center justify-between text-xs text-slate-400">
-            <span>Scan Throughput</span>
+            <span id="labelThroughput">Scan Throughput</span>
             <i class="fa-solid fa-bolt text-dna-cyan"></i>
           </div>
           <div id="throughputMetric" class="text-2xl font-bold text-dna-cyan mono mt-1">--</div>
-          <div class="text-[11px] text-slate-400 mt-0.5">k-mers per second</div>
+          <div id="subtextThroughput" class="text-[11px] text-slate-400 mt-0.5">k-mers per second</div>
         </div>
       </div>
 
@@ -351,14 +563,20 @@
         </div>
       </div>
 
-      <!-- Hits Table Container -->
+      <!-- Hits Table Container with Click-to-Inspect Tip -->
       <div class="bg-slate-900/60 rounded-2xl border border-slate-800/80 shadow-xl backdrop-blur-sm overflow-hidden">
         
         <!-- Table Toolbar -->
         <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div class="flex items-center space-x-3 w-full sm:w-auto">
-            <h3 class="text-sm font-semibold text-white whitespace-nowrap">Detected Alignment Hits</h3>
-            <span id="tableCountBadge" class="px-2 py-0.5 text-xs rounded-full bg-slate-800 text-slate-300 font-mono">0 hits</span>
+          <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <h3 class="text-sm font-semibold text-white whitespace-nowrap flex items-center space-x-2">
+              <span>Detected Alignment Hits</span>
+              <span id="tableCountBadge" class="px-2 py-0.5 text-xs rounded-full bg-slate-800 text-slate-300 font-mono">0 hits</span>
+            </h3>
+            <span class="hidden md:inline-flex items-center space-x-1 text-[11px] text-dna-cyan bg-dna-cyan/10 px-2 py-0.5 rounded-full border border-dna-cyan/20">
+              <i class="fa-solid fa-hand-pointer text-[10px]"></i>
+              <span>Click any row to open Lock-and-Key Inspector</span>
+            </span>
           </div>
 
           <!-- Filters & Actions -->
@@ -386,22 +604,23 @@
         <!-- Table Data -->
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs">
-            <thead class="bg-slate-950/80 text-slate-400 uppercase font-semibold border-b border-slate-800">
-              <tr>
+            <thead id="hitsTableHead" class="bg-slate-950/80 text-slate-400 uppercase font-semibold border-b border-slate-800">
+              <tr id="tableHeaderRow">
                 <th class="px-4 py-3">Locus / Target</th>
                 <th class="px-4 py-3">Coordinates</th>
-                <th class="px-4 py-3">Strand</th>
+                <th class="px-4 py-3 text-center">Strand</th>
                 <th class="px-4 py-3">Aligned Protospacer (5' &rarr; 3')</th>
-                <th class="px-4 py-3">PAM</th>
+                <th class="px-4 py-3 text-center">PAM</th>
                 <th class="px-4 py-3 text-center">MM</th>
                 <th class="px-4 py-3 text-right">MIT Score</th>
                 <th class="px-4 py-3 text-right">CFD Score</th>
                 <th class="px-4 py-3 text-center">Risk Tier</th>
+                <th class="px-4 py-3 text-center">Inspect</th>
               </tr>
             </thead>
             <tbody id="hitsTableBody" class="divide-y divide-slate-800/60 mono text-slate-300">
               <tr>
-                <td colspan="9" class="px-4 py-8 text-center text-slate-500 font-sans">No alignment executed yet.</td>
+                <td colspan="10" class="px-4 py-8 text-center text-slate-500 font-sans">No alignment executed yet.</td>
               </tr>
             </tbody>
           </table>
@@ -421,6 +640,280 @@
     </div>
 
   </main>
+
+  <!-- Feature 2: Lock-and-Key Visual Fit Inspector Modal -->
+  <div id="lockAndKeyModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-3xl w-full p-6 space-y-6 shadow-2xl overflow-y-auto max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-dna-cyan/20 border border-dna-cyan/40 text-dna-cyan flex items-center justify-center text-lg">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center space-x-2">
+              <span>"Lock-and-Key" Visual Fit Inspector</span>
+              <span id="modalRiskPill" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase">
+                EXACT FIT
+              </span>
+            </h3>
+            <p id="modalLocusSubtitle" class="text-xs text-slate-400 mt-0.5 font-mono">
+              Locus: chr19 | Coordinates: 10020-10040 | Strand: +
+            </p>
+          </div>
+        </div>
+        <button onclick="closeLockAndKeyInspector()" class="text-slate-400 hover:text-white transition p-1.5 rounded-lg hover:bg-slate-800">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Plain-English Verdict Callout -->
+      <div id="modalVerdictBox" class="p-4 rounded-xl border bg-slate-950/80 space-y-1">
+        <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider" id="modalVerdictHeader">
+          <i class="fa-solid fa-circle-check text-emerald-400"></i>
+          <span class="text-emerald-400">Exact Fit — High Chance of Cutting Here</span>
+        </div>
+        <p id="modalVerdictDescription" class="text-xs text-slate-300 leading-relaxed">
+          The 20-letter target key matches the genomic DNA lock with 100% letter-by-letter fidelity, and the PAM clasp engages firmly. Cas9 will cut here with maximum efficiency.
+        </p>
+      </div>
+
+      <!-- Letter-by-Letter Visual Comparison Track -->
+      <div class="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between text-xs text-slate-400">
+          <span class="font-semibold text-slate-200">Letter-by-Letter Alignment Matrix (5' &rarr; 3')</span>
+          <div class="flex items-center space-x-3 text-[11px]">
+            <span class="flex items-center space-x-1 text-emerald-400"><i class="fa-solid fa-check"></i><span>Match</span></span>
+            <span class="flex items-center space-x-1 text-rose-400"><i class="fa-solid fa-xmark"></i><span>Mismatch</span></span>
+            <span class="flex items-center space-x-1 text-dna-purple font-semibold"><span>PAM Clasp</span></span>
+          </div>
+        </div>
+
+        <!-- Visual Grid -->
+        <div class="overflow-x-auto pb-2">
+          <div class="min-w-[620px] space-y-2">
+            
+            <!-- Track 1: Guide Key -->
+            <div class="flex items-center space-x-1">
+              <span class="w-20 text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Target Key:</span>
+              <div id="modalKeyRow" class="flex space-x-1 mono text-xs font-bold">
+                <!-- Dynamically populated 20 letter boxes -->
+              </div>
+              <span class="w-14 text-center text-[10px] text-slate-500 font-sans italic">(No PAM)</span>
+            </div>
+
+            <!-- Connector Match/Mismatch Line -->
+            <div class="flex items-center space-x-1">
+              <span class="w-20 text-[10px] text-slate-500 uppercase tracking-wider shrink-0 text-right pr-2">Fit:</span>
+              <div id="modalConnectorRow" class="flex space-x-1 text-[11px] text-center font-bold">
+                <!-- Dynamically populated checkmarks & crosses -->
+              </div>
+              <span class="w-14"></span>
+            </div>
+
+            <!-- Track 2: DNA Lock + PAM -->
+            <div class="flex items-center space-x-1">
+              <span class="w-20 text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">DNA Lock:</span>
+              <div id="modalLockRow" class="flex space-x-1 mono text-xs font-bold">
+                <!-- Dynamically populated 20 letter boxes -->
+              </div>
+              <!-- PAM Clasp Boxes -->
+              <div id="modalPamBoxes" class="flex space-x-1 mono text-xs font-bold pl-1.5 border-l border-slate-700">
+                <!-- 3 PAM letter boxes -->
+              </div>
+            </div>
+
+            <!-- Position Numbers & Functional Zones -->
+            <div class="pt-3 border-t border-slate-800/80">
+              <div class="flex items-center space-x-1">
+                <span class="w-20 text-[10px] text-slate-500 uppercase shrink-0">Position:</span>
+                <div id="modalPosRow" class="flex space-x-1 mono text-[10px] text-slate-500 text-center">
+                  <!-- 1 to 20 -->
+                </div>
+                <span class="w-14 text-center text-[10px] text-dna-purple font-semibold">PAM</span>
+              </div>
+
+              <!-- Zone Brackets Bar -->
+              <div class="flex items-center space-x-1 mt-2">
+                <span class="w-20"></span>
+                <div class="flex space-x-1 w-full text-[10px]">
+                  <div class="w-[58%] text-center py-1 bg-slate-900 border border-slate-800 rounded text-slate-400 font-medium">
+                    PAM-Distal Zone (Pos 1–12) &bull; Mismatches Tolerated
+                  </div>
+                  <div class="w-[42%] text-center py-1 bg-amber-500/10 border border-amber-500/30 rounded text-amber-300 font-medium">
+                    Seed Lock Zone (Pos 13–20) &bull; Critical Fit
+                  </div>
+                </div>
+                <div class="w-14"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Key-vs-Lock Metrics & Mismatch Breakdown -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+          <div class="text-[11px] text-slate-400">Total Wrong Letters</div>
+          <div id="modalMmCount" class="text-xl font-bold text-white mono">0 / 20</div>
+          <div id="modalMmSubtext" class="text-[10px] text-emerald-400">100% exact letter match</div>
+        </div>
+
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+          <div class="text-[11px] text-slate-400">Cutting Likelihood (CFD)</div>
+          <div id="modalCfdValue" class="text-xl font-bold text-dna-rose mono">1.0000</div>
+          <div id="modalCfdSubtext" class="text-[10px] text-slate-400">Maximum cleavage rate</div>
+        </div>
+
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+          <div class="text-[11px] text-slate-400">Specificity Score (MIT)</div>
+          <div id="modalMitValue" class="text-xl font-bold text-brand-400 mono">100.0%</div>
+          <div id="modalMitSubtext" class="text-[10px] text-slate-400">Position & distance weighted</div>
+        </div>
+      </div>
+
+      <!-- Mismatch Positions Detail List -->
+      <div id="modalMismatchListCard" class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+        <div class="font-semibold text-slate-300 flex items-center space-x-2">
+          <i class="fa-solid fa-list-check text-dna-cyan"></i>
+          <span>Mismatch Position Breakdown</span>
+        </div>
+        <div id="modalMismatchList" class="space-y-1.5 text-slate-400">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex justify-end pt-2 border-t border-slate-800">
+        <button 
+          onclick="closeLockAndKeyInspector()" 
+          class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition"
+        >
+          Close Inspector
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Feature 3: Custom "Test Lock" Builder Modal -->
+  <div id="testLockModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-dna-cyan/20 border border-dna-cyan/40 text-dna-cyan flex items-center justify-center text-base">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Custom "Test Lock" Builder</h3>
+            <p class="text-xs text-slate-400">Assemble a 20-letter target lock + PAM to inject into FASTA</p>
+          </div>
+        </div>
+        <button onclick="closeTestLockModal()" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Test whether your CRISPR guide key finds its intended target lock or unintended mutations. Build a custom 20-letter sequence + PAM clasp and inject it directly into the reference genome box.
+      </p>
+
+      <!-- 20-letter Protospacer Lock -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-slate-300">20-Letter Protospacer Lock</label>
+          <span id="testLockCounter" class="text-xs mono text-slate-400 font-semibold">20/20 nt</span>
+        </div>
+        <input 
+          type="text" 
+          id="testLockSeqInput" 
+          maxlength="20"
+          value="GAGTCCGAGCAGAAGAAGAA" 
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm mono tracking-widest text-dna-cyan focus:outline-none focus:ring-2 focus:ring-dna-cyan uppercase placeholder-slate-600 transition"
+          oninput="handleTestLockInput(this)"
+        />
+        <div class="flex flex-wrap gap-1.5 pt-1">
+          <button type="button" onclick="quickFillTestLock('exact')" class="px-2 py-0.5 text-[11px] rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+            Copy Guide Key (Exact)
+          </button>
+          <button type="button" onclick="quickFillTestLock('seed_mut')" class="px-2 py-0.5 text-[11px] rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30">
+            1-Letter Seed Mutation
+          </button>
+          <button type="button" onclick="quickFillTestLock('distal_mut')" class="px-2 py-0.5 text-[11px] rounded bg-slate-800 hover:bg-slate-700 text-dna-rose border border-rose-500/30">
+            2-Letter Distal Mutation
+          </button>
+          <button type="button" onclick="quickFillTestLock('random')" class="px-2 py-0.5 text-[11px] rounded bg-slate-800 hover:bg-slate-700 text-dna-purple border border-purple-500/30">
+            Random 20-nt
+          </button>
+        </div>
+      </div>
+
+      <!-- PAM Selection & Locus Header -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">PAM Clasp (3-nt)</label>
+          <select id="testLockPamSelect" onchange="updateTestLockPreview()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-dna-cyan">
+            <option value="TGG" selected>TGG (Canonical SpCas9 - 100% Fit)</option>
+            <option value="CGG">CGG (Canonical SpCas9 - 100% Fit)</option>
+            <option value="AGG">AGG (Canonical SpCas9 - 100% Fit)</option>
+            <option value="GGG">GGG (Canonical SpCas9 - 100% Fit)</option>
+            <option value="CAG">CAG (Non-canonical SpCas9 - 26% Fit)</option>
+            <option value="AAG">AAG (Non-canonical SpCas9 - 26% Fit)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Locus Name / Label</label>
+          <input 
+            type="text" 
+            id="testLockLocusName" 
+            value="synthetic_test_lock_locus" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs mono text-slate-300 focus:outline-none focus:ring-2 focus:ring-dna-cyan"
+          />
+        </div>
+      </div>
+
+      <!-- Assembled Lock Preview -->
+      <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
+        <div class="text-[11px] text-slate-400 font-medium">Assembled 23-nt Lock Preview (Protospacer + PAM):</div>
+        <div class="mono text-sm tracking-wider font-bold">
+          <span id="previewProtospacer" class="text-dna-cyan">GAGTCCGAGCAGAAGAAGAA</span>
+          <span id="previewPam" class="text-dna-purple bg-purple-500/20 px-1 py-0.5 rounded ml-1">TGG</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+        <button 
+          type="button"
+          onclick="closeTestLockModal()" 
+          class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+        >
+          Cancel
+        </button>
+        <button 
+          type="button"
+          onclick="injectTestLock('append')" 
+          class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-dna-cyan border border-dna-cyan/40 text-xs font-semibold transition flex items-center justify-center space-x-1.5"
+        >
+          <i class="fa-solid fa-plus"></i>
+          <span>Append to FASTA</span>
+        </button>
+        <button 
+          type="button"
+          onclick="injectTestLock('replace')" 
+          class="w-full sm:w-auto px-4 py-2 rounded-xl bg-dna-cyan hover:bg-cyan-400 text-slate-950 text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-lg shadow-dna-cyan/20"
+        >
+          <i class="fa-solid fa-file-circle-check"></i>
+          <span>Set As Only FASTA Lock</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
 
   <!-- Benchmark Modal -->
   <div id="benchmarkModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
@@ -450,27 +943,34 @@
         </span>
       </div>
 
-      <!-- Benchmark Results Container -->
       <div id="benchmarkResultsArea" class="space-y-3 pt-2">
-        <div class="text-xs text-slate-500 italic">Click "Run Benchmark" to execute.</div>
+        <!-- Results rendered here -->
       </div>
     </div>
   </div>
 
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-slate-900 border border-dna-cyan/50 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 text-xs">
+      <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+      <span id="toastMessage">Action successful!</span>
+    </div>
+  </div>
+
   <!-- Footer -->
-  <footer class="border-t border-slate-800 bg-slate-950 text-slate-500 text-xs py-6 mt-12">
+  <footer class="border-t border-slate-800/80 bg-slate-950/80 py-6 text-xs text-slate-500 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div>
-        <span class="font-bold text-slate-400">GeneWeaver</span> &bull; Production-Grade CRISPR-Cas9 GPU Alignment Engine
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-dna text-brand-500"></i>
+        <span>GeneWeaver &bull; GPU-Accelerated CRISPR Alignment & Off-Target Risk Engine</span>
       </div>
-      <div class="flex space-x-6 text-slate-400">
-        <a href="https://github.com/dinu18s/GenWeaver" target="_blank" class="hover:text-brand-400 transition"><i class="fa-brands fa-github mr-1"></i>GitHub Repository</a>
-        <a href="/docs" target="_blank" class="hover:text-brand-400 transition"><i class="fa-solid fa-book mr-1"></i>Swagger API</a>
+      <div>
+        <span>Biophysical Models: Hsu et al. (2013) MIT &bull; Doench et al. (2016) CFD</span>
       </div>
     </div>
   </footer>
 
-  <!-- Application Logic JS with Hybrid Backend/In-Browser Engine -->
+  <!-- Application Logic -->
   <script>
     let isBackendConnected = false;
     let currentJobId = null;
@@ -478,6 +978,7 @@
     let cachedHits = [];
     let currentPage = 1;
     const pageSize = 50;
+    let currentViewMode = 'simple'; // 'simple' or 'technical'
 
     const PRESETS = {
       EMX1: {
@@ -491,6 +992,55 @@
       FANCF: {
         grna: "GGAATCCCTTCTGCAGCACC",
         pam: "NGG",
+      }
+    };
+
+    const DEMO_SCENARIOS = {
+      safe: {
+        title: "🟢 Safe Fit: 1 Exact Match, 0 Look-Alikes",
+        badge: "SAFE FIT",
+        badgeClass: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
+        icon: '<i class="fa-solid fa-shield-check text-emerald-400"></i>',
+        grna: "GAGTCCGAGCAGAAGAAGAA",
+        pam: "NGG",
+        mm: 2,
+        desc: "This 20-letter key matches exactly 1 target site with an NGG lock and has 0 dangerous look-alikes. Cas9 will cut cleanly at this exact locus without unintended cuts.",
+        fasta: `>chr19_safe_clean_locus
+GAGTCCGAGCAGAAGAAGAAGGGCTCGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC
+CTGCTGCCGCTGCTGCCGCCCCCGGCCCCCGAGGCCTGGGCCCAGGAGCTGCGCTCGCTG
+CGCGCGGCGCTGGAGGAGCTGGAGCAGCGCCTGGAGCGCCTGCAGCCCCGGCTGCCCGAG
+CGCGGCGCGCCCGGCGCCGAGGCGGAGCTGCTGCTGGCGCTGCGGGAGCGCCTGGACGGG`
+      },
+      risky: {
+        title: "⚠️ Risky Look-Alike: High Off-Target Cleavage Threat",
+        badge: "RISKY LOOK-ALIKE",
+        badgeClass: "bg-amber-500/20 text-amber-400 border-amber-500/40",
+        icon: '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>',
+        grna: "GAGTCCGAGCAGAAGAAGTA",
+        pam: "NGG",
+        mm: 3,
+        desc: "This 20-letter guide matches several look-alike DNA spots with only 1-2 wrong letters. Because Cas9 tolerates mutations outside the seed region, it risks cutting multiple unintended genomic spots!",
+        fasta: `>chr19_locus_homologous_family
+GAGTCCGAGCAGAAGAAGAAGGGCTCGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC
+GAGTCCGAGCAGAAGAAGTAGGGCGCGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGC
+CTGCTGCCGCTGCTGCCGCCCCCGGCCCCCGAGGCCTGGGCCCAGGAGCTGCGCTCGCT
+GAGTCCGAGCAGAAGAAGTATGGGCGCGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGG
+GAGTCCGTGCAGAAGAAGAACGGGCCGCCGCGCCCCTCCTCCTGGCCCTGCCGGCCCTGC
+GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`
+      },
+      nofit: {
+        title: "❌ No Fit: Zero Target Locks Found",
+        badge: "NO FIT",
+        badgeClass: "bg-rose-500/20 text-rose-400 border-rose-500/40",
+        icon: '<i class="fa-solid fa-ban text-rose-400"></i>',
+        grna: "TTTTTTTTTTTTTTTTTTTT",
+        pam: "NGG",
+        mm: 3,
+        desc: "This 20-letter sequence has 0 matching DNA locks or valid PAM motifs in this chromosome. Cas9 cannot bind or cut anywhere in this sequence.",
+        fasta: `>chr19_non_homologous_reference
+GAGTCCGAGCAGAAGAAGAAGGGCTCGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC
+CTGCTGCCGCTGCTGCCGCCCCCGGCCCCCGAGGCCTGGGCCCAGGAGCTGCGCTCGCTG
+CGCGCGGCGCTGGAGGAGCTGGAGCAGCGCCTGGAGCGCCTGCAGCCCCGGCTGCCCGAG`
       }
     };
 
@@ -513,10 +1063,18 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
     window.addEventListener('DOMContentLoaded', async () => {
       loadSampleFasta();
       await fetchTelemetry();
+
+      // Keyboard listener for modals (Escape key closes)
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeLockAndKeyInspector();
+          closeTestLockModal();
+          closeBenchmarkModal();
+        }
+      });
     });
 
     async function fetchTelemetry() {
-      // Determine if running on GitHub Pages or static host
       const isGitHubPages = window.location.hostname.includes('github.io');
       
       try {
@@ -537,7 +1095,6 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
         // Backend not reachable -> activate static mode
       }
 
-      // Fallback: In-Browser Client Engine (GitHub Pages Demo)
       isBackendConnected = false;
       document.getElementById('telemetryDevice').textContent = 'In-Browser JS Engine';
       document.getElementById('telemetryDot').className = 'w-2 h-2 rounded-full bg-cyan-400';
@@ -560,6 +1117,32 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       }
     }
 
+    // ------------------------------------------------------------------------
+    // Feature 1: One-Click Safe vs. Risky vs. No-Fit Demo Tester
+    // ------------------------------------------------------------------------
+    function loadDemoScenario(type) {
+      const sc = DEMO_SCENARIOS[type];
+      if (!sc) return;
+
+      const input = document.getElementById('grnaInput');
+      input.value = sc.grna;
+      handleGrnaInput(input);
+
+      document.getElementById('pamSelect').value = sc.pam;
+      document.getElementById('mismatchRange').value = sc.mm;
+      document.getElementById('mismatchValBadge').textContent = `${sc.mm} mm`;
+      document.getElementById('targetFasta').value = sc.fasta;
+
+      // Update Explanation Banner
+      document.getElementById('demoIcon').innerHTML = sc.icon;
+      document.getElementById('demoTitle').textContent = sc.title;
+      document.getElementById('demoBadge').textContent = sc.badge;
+      document.getElementById('demoBadge').className = `px-2 py-0.5 text-[10px] font-bold rounded border ${sc.badgeClass}`;
+      document.getElementById('demoDesc').textContent = sc.desc;
+
+      showToast(`Loaded ${sc.badge} scenario! Click "Run Demo" to view fit.`);
+    }
+
     function loadPreset(name) {
       const p = PRESETS[name];
       if (p) {
@@ -567,11 +1150,122 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
         input.value = p.grna;
         document.getElementById('pamSelect').value = p.pam;
         handleGrnaInput(input);
+
+        document.getElementById('demoTitle').textContent = `Benchmark Preset: ${name}`;
+        document.getElementById('demoBadge').textContent = "BENCHMARK";
+        document.getElementById('demoBadge').className = "px-2 py-0.5 text-[10px] font-bold rounded bg-brand-500/20 text-brand-400 border border-brand-500/40";
+        document.getElementById('demoDesc').textContent = `Loaded validated literature guide sequence for ${name}.`;
       }
+    }
+
+    function generateRandomGrna() {
+      const bases = ['A', 'C', 'G', 'T'];
+      let randomSeq = '';
+      for (let i = 0; i < 20; i++) {
+        randomSeq += bases[Math.floor(Math.random() * bases.length)];
+      }
+      const input = document.getElementById('grnaInput');
+      input.value = randomSeq;
+      handleGrnaInput(input);
+
+      document.getElementById('demoTitle').textContent = "Random 20-nt Guide Key";
+      document.getElementById('demoBadge').textContent = "RANDOM";
+      document.getElementById('demoBadge').className = "px-2 py-0.5 text-[10px] font-bold rounded bg-dna-purple/20 text-dna-purple border border-dna-purple/40";
+      document.getElementById('demoDesc').textContent = "Generated a fresh, synthetic 20-letter nucleotide sequence.";
+      showToast("Generated new random 20-letter guide!");
     }
 
     function loadSampleFasta() {
       document.getElementById('targetFasta').value = SAMPLE_CH19;
+      showToast("Loaded Chr19 reference sequence snippet.");
+    }
+
+    // ------------------------------------------------------------------------
+    // Feature 3: Custom "Test Lock" Builder Modal & Injection
+    // ------------------------------------------------------------------------
+    function openTestLockModal() {
+      // Default the lock sequence to the current query gRNA if empty
+      const currentGrna = document.getElementById('grnaInput').value.trim();
+      const lockInput = document.getElementById('testLockSeqInput');
+      if (currentGrna.length === 20) {
+        lockInput.value = currentGrna;
+      }
+      handleTestLockInput(lockInput);
+      updateTestLockPreview();
+      document.getElementById('testLockModal').classList.remove('hidden');
+    }
+
+    function closeTestLockModal() {
+      document.getElementById('testLockModal').classList.add('hidden');
+    }
+
+    function handleTestLockInput(el) {
+      el.value = el.value.replace(/[^acgtuACGTU]/g, '').toUpperCase();
+      document.getElementById('testLockCounter').textContent = `${el.value.length}/20 nt`;
+      updateTestLockPreview();
+    }
+
+    function quickFillTestLock(type) {
+      const lockInput = document.getElementById('testLockSeqInput');
+      const currentGrna = document.getElementById('grnaInput').value.trim() || "GAGTCCGAGCAGAAGAAGAA";
+      const bases = ['A', 'C', 'G', 'T'];
+
+      if (type === 'exact') {
+        lockInput.value = currentGrna;
+      } else if (type === 'seed_mut') {
+        // Mutate position 16 (Seed region, index 15)
+        const arr = currentGrna.split('');
+        const oldBase = arr[15] || 'G';
+        const otherBases = bases.filter(b => b !== oldBase);
+        arr[15] = otherBases[0];
+        lockInput.value = arr.join('');
+      } else if (type === 'distal_mut') {
+        // Mutate positions 2 and 4 (Distal region)
+        const arr = currentGrna.split('');
+        arr[1] = arr[1] === 'A' ? 'C' : 'A';
+        arr[3] = arr[3] === 'T' ? 'G' : 'T';
+        lockInput.value = arr.join('');
+      } else if (type === 'random') {
+        let rnd = '';
+        for (let i = 0; i < 20; i++) rnd += bases[Math.floor(Math.random() * bases.length)];
+        lockInput.value = rnd;
+      }
+      handleTestLockInput(lockInput);
+    }
+
+    function updateTestLockPreview() {
+      const lockSeq = document.getElementById('testLockSeqInput').value.toUpperCase();
+      const pamSeq = document.getElementById('testLockPamSelect').value;
+      document.getElementById('previewProtospacer').textContent = lockSeq.padEnd(20, 'N');
+      document.getElementById('previewPam').textContent = pamSeq;
+    }
+
+    function injectTestLock(mode) {
+      const lockSeq = document.getElementById('testLockSeqInput').value.toUpperCase().trim();
+      const pamSeq = document.getElementById('testLockPamSelect').value;
+      const locusName = document.getElementById('testLockLocusName').value.trim() || "synthetic_test_lock";
+
+      if (lockSeq.length !== 20) {
+        alert("The lock protospacer must be exactly 20 nucleotides long.");
+        return;
+      }
+
+      const full23Lock = lockSeq + pamSeq;
+      const fastaSnippet = `\n>${locusName}\n${full23Lock}\n`;
+      const fastaArea = document.getElementById('targetFasta');
+
+      if (mode === 'append') {
+        fastaArea.value = (fastaArea.value.trim() + "\n" + fastaSnippet).trim();
+      } else if (mode === 'replace') {
+        fastaArea.value = fastaSnippet.trim();
+      }
+
+      // Visual flash highlight on textarea
+      fastaArea.classList.add('flash-highlight');
+      setTimeout(() => fastaArea.classList.remove('flash-highlight'), 1200);
+
+      closeTestLockModal();
+      showToast(`Inserted custom lock "${full23Lock}" into FASTA!`);
     }
 
     // ------------------------------------------------------------------------
@@ -657,26 +1351,37 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
     function runClientSideAlignment(guide, pam, mmThreshold, fastaText) {
       const t0 = performance.now();
       const lines = fastaText.split('\n');
-      let targetName = "Custom Sequence";
-      let seqParts = [];
+      
+      const records = [];
+      let currentHeader = "Sequence_1";
+      let currentSeq = [];
 
       for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.startsWith('>')) {
-          targetName = trimmed.substring(1).trim();
+          if (currentSeq.length > 0) {
+            records.push({ header: currentHeader, seq: currentSeq.join('') });
+            currentSeq = [];
+          }
+          currentHeader = trimmed.substring(1).trim() || "Sequence";
         } else if (trimmed) {
-          seqParts.push(trimmed.toUpperCase().replace(/[^ACGTN]/g, ''));
+          currentSeq.push(trimmed.toUpperCase().replace(/[^ACGTN]/g, ''));
         }
       }
-      const fullSeq = seqParts.join('');
+      if (currentSeq.length > 0) {
+        records.push({ header: currentHeader, seq: currentSeq.join('') });
+      }
+
       const pamLen = pam.length;
       const windowLen = 20 + pamLen;
       const hits = [];
       let totalKmers = 0;
       let totalPamSites = 0;
 
-      if (fullSeq.length >= windowLen) {
-        totalKmers = (fullSeq.length - windowLen + 1) * 2;
+      for (const rec of records) {
+        const fullSeq = rec.seq;
+        if (fullSeq.length < windowLen) continue;
+        totalKmers += (fullSeq.length - windowLen + 1) * 2;
 
         // Forward strand
         for (let i = 0; i <= fullSeq.length - windowLen; i++) {
@@ -696,7 +1401,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
               else if (cfd >= 0.10 || mit >= 20.0) tier = "Medium";
 
               hits.push({
-                target_name: targetName,
+                target_name: rec.header,
                 start_pos: i,
                 end_pos: i + 20,
                 strand: "+",
@@ -733,7 +1438,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
               else if (cfd >= 0.10 || mit >= 20.0) tier = "Medium";
 
               hits.push({
-                target_name: targetName,
+                target_name: rec.header,
                 start_pos: i,
                 end_pos: i + 20,
                 strand: "-",
@@ -764,7 +1469,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
     }
 
     // ------------------------------------------------------------------------
-    // Job Submission Controller (Unified Backend & Client Fallback)
+    // Job Submission Controller
     // ------------------------------------------------------------------------
     async function submitAlignmentJob() {
       const grna = document.getElementById('grnaInput').value.trim();
@@ -774,7 +1479,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       const dev = document.getElementById('devicePreference').value;
 
       if (grna.length !== 20) {
-        alert("Please provide an exact 20-nt guide RNA sequence.");
+        alert("Please provide an exact 20-nt guide RNA sequence (nucleotides A, C, G, T).");
         return;
       }
       if (!fasta) {
@@ -785,10 +1490,9 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       const btn = document.getElementById('submitBtn');
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Aligning...</span>';
-      updateJobStatusUI("RUNNING", 20, "Extracting candidate protospacers...");
+      updateJobStatusUI("RUNNING", 20, "Extracting candidate protospacer locks...");
 
       if (isBackendConnected) {
-        // Submit via FastAPI Backend
         try {
           const payload = {
             grna_sequence: grna,
@@ -816,7 +1520,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
         }
       }
 
-      // Fallback: Run in-browser client execution with realistic progress animation
+      // Fallback: Run in-browser client execution with realistic animation
       setTimeout(() => {
         updateJobStatusUI("RUNNING", 65, "Scanning PAM sites & computing MIT/CFD biophysical scores...");
         setTimeout(() => {
@@ -840,7 +1544,10 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
             page_size: pageSize,
             total_pages: Math.max(1, Math.ceil(cachedHits.length / pageSize))
           });
-        }, 150);
+
+          // Scroll smoothly to results
+          document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }, 120);
       }, 100);
     }
 
@@ -866,6 +1573,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
           btn.innerHTML = '<i class="fa-solid fa-bolt"></i> <span>Execute Alignment</span>';
 
           await fetchResults(jobId);
+          document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
         } else if (job.status === "FAILED") {
           clearInterval(pollInterval);
           updateJobStatusUI("FAILED", 0, "Execution failed: " + (job.error_message || "Unknown error"));
@@ -914,6 +1622,183 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       }
     }
 
+    // ------------------------------------------------------------------------
+    // Feature 4: Plain-English Summary Banner & View Mode Switcher
+    // ------------------------------------------------------------------------
+    function setViewMode(mode) {
+      currentViewMode = mode;
+      const simpleBtn = document.getElementById('modeSimpleBtn');
+      const techBtn = document.getElementById('modeTechBtn');
+
+      if (mode === 'simple') {
+        simpleBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white shadow transition flex items-center space-x-1.5";
+        techBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5";
+      } else {
+        techBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-dna-cyan text-slate-950 font-bold shadow transition flex items-center space-x-1.5";
+        simpleBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5";
+      }
+
+      updateSummaryBanner();
+      updateTableHeader();
+      renderTableRows();
+    }
+
+    function updateSummaryBanner() {
+      const total = cachedHits.length;
+      const exactHits = cachedHits.filter(h => h.mismatches === 0);
+      const highHits = cachedHits.filter(h => h.cleavage_tier === "High" && h.mismatches > 0);
+      const medHits = cachedHits.filter(h => h.cleavage_tier === "Medium");
+      const lowHits = cachedHits.filter(h => h.cleavage_tier === "Low");
+
+      const iconEl = document.getElementById('summaryStatusIcon');
+      const pillEl = document.getElementById('verdictPill');
+      const takeawayEl = document.getElementById('summaryTakeawayText');
+
+      const card1Title = document.getElementById('cardTitle1');
+      const card1Desc = document.getElementById('cardDesc1');
+      const card1Icon = document.getElementById('cardIcon1');
+
+      const card2Title = document.getElementById('cardTitle2');
+      const card2Desc = document.getElementById('cardDesc2');
+      const card2Icon = document.getElementById('cardIcon2');
+
+      const card3Title = document.getElementById('cardTitle3');
+      const card3Desc = document.getElementById('cardDesc3');
+      const card3Icon = document.getElementById('cardIcon3');
+
+      if (total === 0) {
+        // No hits
+        iconEl.className = "w-9 h-9 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center text-lg border border-slate-700";
+        iconEl.innerHTML = '<i class="fa-solid fa-ban"></i>';
+        pillEl.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700 uppercase";
+        pillEl.textContent = "NO FIT FOUND";
+        takeawayEl.textContent = "Zero matching DNA locks or valid PAM motifs found in this sequence. Cas9 will not bind or cut anywhere.";
+
+        card1Title.textContent = "On-Target Lock";
+        card1Desc.textContent = "0 target sites found";
+        card1Icon.innerHTML = '<i class="fa-solid fa-circle-xmark text-slate-500"></i>';
+
+        card2Title.textContent = "Look-Alike Threat";
+        card2Desc.textContent = "None detected";
+        card2Icon.innerHTML = '<i class="fa-solid fa-shield text-slate-500"></i>';
+
+        card3Title.textContent = "Recommendation";
+        card3Desc.textContent = "Redesign guide or verify PAM in FASTA";
+        card3Icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>';
+      } else if (exactHits.length >= 1 && highHits.length === 0 && medHits.length === 0) {
+        // Perfect safe fit
+        iconEl.className = "w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/40 shadow-sm shadow-emerald-500/20";
+        iconEl.innerHTML = '<i class="fa-solid fa-shield-check"></i>';
+        pillEl.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase";
+        pillEl.textContent = "SAFE FIT";
+        takeawayEl.textContent = `1 exact match found on your target gene and 0 risky look-alike spots detected. Your CRISPR guide RNA fits safely with clean specificity.`;
+
+        card1Title.textContent = "On-Target Lock";
+        card1Desc.textContent = `${exactHits.length} exact 20/20 match found`;
+        card1Icon.innerHTML = '<i class="fa-solid fa-bullseye text-emerald-400"></i>';
+
+        card2Title.textContent = "Look-Alike Threat";
+        card2Desc.textContent = "Zero dangerous look-alikes";
+        card2Icon.innerHTML = '<i class="fa-solid fa-shield-check text-emerald-400"></i>';
+
+        card3Title.textContent = "Recommendation";
+        card3Desc.textContent = "Safe to proceed with gene editing";
+        card3Icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+      } else if (highHits.length > 0 || medHits.length > 0) {
+        // Risky look-alikes present
+        iconEl.className = "w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg border border-amber-500/40 shadow-sm shadow-amber-500/20";
+        iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        pillEl.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 uppercase";
+        pillEl.textContent = "CAUTION: LOOK-ALIKES DETECTED";
+        
+        const onTargetPart = exactHits.length > 0 ? `${exactHits.length} exact match found, but ` : "No exact match, but ";
+        takeawayEl.textContent = `${onTargetPart}${highHits.length + medHits.length} similar look-alike spots detected nearby (${highHits.length} high-risk, ${medHits.length} moderate). Review individual fits before proceeding to prevent unintended cutting.`;
+
+        card1Title.textContent = "On-Target Lock";
+        card1Desc.textContent = exactHits.length > 0 ? "Target lock located" : "No exact lock found";
+        card1Icon.innerHTML = exactHits.length > 0 ? '<i class="fa-solid fa-circle-check text-emerald-400"></i>' : '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
+
+        card2Title.textContent = "Look-Alike Threat";
+        card2Desc.textContent = `${highHits.length} High Risk, ${medHits.length} Medium Risk`;
+        card2Icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>';
+
+        card3Title.textContent = "Recommendation";
+        card3Desc.textContent = "Careful review or guide redesign recommended";
+        card3Icon.innerHTML = '<i class="fa-solid fa-circle-exclamation text-amber-400"></i>';
+      } else {
+        // Tolerated minor mismatches only
+        iconEl.className = "w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg border border-emerald-500/40";
+        iconEl.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        pillEl.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase";
+        pillEl.textContent = "LOW RISK FIT";
+        takeawayEl.textContent = `${exactHits.length} exact match and ${lowHits.length} minor low-risk spots found. Cutting at non-target sites is highly improbable.`;
+
+        card1Title.textContent = "On-Target Lock";
+        card1Desc.textContent = exactHits.length > 0 ? "Target lock located" : "Near-exact lock only";
+        card1Icon.innerHTML = '<i class="fa-solid fa-bullseye text-emerald-400"></i>';
+
+        card2Title.textContent = "Look-Alike Threat";
+        card2Desc.textContent = `${lowHits.length} tolerated low-risk spots`;
+        card2Icon.innerHTML = '<i class="fa-solid fa-shield text-emerald-400"></i>';
+
+        card3Title.textContent = "Recommendation";
+        card3Desc.textContent = "Favorable profile for targeted editing";
+        card3Icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+      }
+
+      // Update card subtitles based on Simple vs Technical mode
+      if (currentViewMode === 'simple') {
+        document.getElementById('labelHighRisk').textContent = "Dangerous Look-Alikes";
+        document.getElementById('subtextHighRisk').textContent = "High cutting probability";
+        document.getElementById('labelMedRisk').textContent = "Moderate Look-Alikes";
+        document.getElementById('subtextMedRisk').textContent = "Possible secondary cutting";
+        document.getElementById('labelLowRisk').textContent = "Harmless / Weak Fits";
+        document.getElementById('subtextLowRisk').textContent = "Negligible cutting risk";
+        document.getElementById('labelThroughput').textContent = "Scanning Speed";
+        document.getElementById('subtextThroughput').textContent = "Letters verified / second";
+      } else {
+        document.getElementById('labelHighRisk').textContent = "High Risk Hits";
+        document.getElementById('subtextHighRisk').textContent = "CFD ≥ 0.50 or MIT ≥ 50";
+        document.getElementById('labelMedRisk').textContent = "Medium Risk Hits";
+        document.getElementById('subtextMedRisk').textContent = "CFD ≥ 0.10 or MIT ≥ 20";
+        document.getElementById('labelLowRisk').textContent = "Low Risk Hits";
+        document.getElementById('subtextLowRisk').textContent = "Tolerated mismatches";
+        document.getElementById('labelThroughput').textContent = "Scan Throughput";
+        document.getElementById('subtextThroughput').textContent = "k-mers per second";
+      }
+    }
+
+    function updateTableHeader() {
+      const thead = document.getElementById('tableHeaderRow');
+      if (currentViewMode === 'simple') {
+        thead.innerHTML = `
+          <th class="px-4 py-3">DNA Target Locus</th>
+          <th class="px-4 py-3">Lock Coordinates</th>
+          <th class="px-4 py-3 text-center">Strand</th>
+          <th class="px-4 py-3">Key (gRNA) vs. DNA Lock Fit</th>
+          <th class="px-4 py-3 text-center">PAM Clasp</th>
+          <th class="px-4 py-3 text-center">Wrong Letters</th>
+          <th class="px-4 py-3 text-right">Specificity Rating</th>
+          <th class="px-4 py-3 text-right">Cutting Likelihood</th>
+          <th class="px-4 py-3 text-center">Safety Verdict</th>
+          <th class="px-4 py-3 text-center">Inspect</th>
+        `;
+      } else {
+        thead.innerHTML = `
+          <th class="px-4 py-3">Locus / Target</th>
+          <th class="px-4 py-3">Coordinates</th>
+          <th class="px-4 py-3 text-center">Strand</th>
+          <th class="px-4 py-3">Aligned Protospacer (5' &rarr; 3')</th>
+          <th class="px-4 py-3 text-center">PAM</th>
+          <th class="px-4 py-3 text-center">MM</th>
+          <th class="px-4 py-3 text-right">MIT Score</th>
+          <th class="px-4 py-3 text-right">CFD Score</th>
+          <th class="px-4 py-3 text-center">Risk Tier</th>
+          <th class="px-4 py-3 text-center">Inspect</th>
+        `;
+      }
+    }
+
     function renderResults(data) {
       document.getElementById('resultsSection').classList.remove('hidden');
 
@@ -931,60 +1816,259 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       document.getElementById('throughputMetric').textContent = throughput.toLocaleString();
       document.getElementById('tableCountBadge').textContent = `${data.total_hits} hits`;
 
+      updateSummaryBanner();
+      updateTableHeader();
       renderHeatmap(cachedHits);
-
-      const tbody = document.getElementById('hitsTableBody');
-      tbody.innerHTML = '';
-
-      if (cachedHits.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-8 text-center text-slate-500 font-sans">No matching hits found for the selected criteria.</td></tr>`;
-        return;
-      }
-
-      const queryGrna = document.getElementById('grnaInput').value.toUpperCase();
-
-      cachedHits.forEach(hit => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-800/40 transition border-b border-slate-800/40";
-
-        let seqHtml = '';
-        for (let i = 0; i < 20; i++) {
-          const char = hit.sequence[i] || 'N';
-          if (queryGrna[i] === char) {
-            seqHtml += `<span class="text-emerald-400">${char}</span>`;
-          } else {
-            seqHtml += `<span class="text-rose-400 font-bold bg-rose-500/20 px-0.5 rounded">${char}</span>`;
-          }
-        }
-
-        let tierBadgeClass = "bg-slate-800 text-slate-400 border-slate-700";
-        if (hit.cleavage_tier === "High") {
-          tierBadgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30";
-        } else if (hit.cleavage_tier === "Medium") {
-          tierBadgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/30";
-        } else if (hit.cleavage_tier === "Low") {
-          tierBadgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
-        }
-
-        tr.innerHTML = `
-          <td class="px-4 py-3 font-sans text-slate-300 font-medium truncate max-w-[160px]">${hit.target_name}</td>
-          <td class="px-4 py-3 text-slate-400">${hit.start_pos} - ${hit.end_pos}</td>
-          <td class="px-4 py-3 text-center"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold">${hit.strand}</span></td>
-          <td class="px-4 py-3 tracking-wider">${seqHtml}</td>
-          <td class="px-4 py-3 text-dna-purple font-bold">${hit.pam_sequence}</td>
-          <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold">${hit.mismatches}</span></td>
-          <td class="px-4 py-3 text-right text-slate-200">${hit.mit_score.toFixed(1)}%</td>
-          <td class="px-4 py-3 text-right font-bold ${hit.cfd_score >= 0.5 ? 'text-rose-400' : (hit.cfd_score >= 0.1 ? 'text-amber-400' : 'text-emerald-400')}">${hit.cfd_score.toFixed(4)}</td>
-          <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 text-[11px] rounded-full border ${tierBadgeClass} font-semibold">${hit.cleavage_tier}</span></td>
-        `;
-        tbody.appendChild(tr);
-      });
+      renderTableRows();
 
       document.getElementById('pageInfo').textContent = `Showing ${(data.page-1)*pageSize + 1}-${Math.min(data.page*pageSize, data.total_hits)} of ${data.total_hits}`;
       document.getElementById('prevPageBtn').disabled = data.page <= 1;
       document.getElementById('nextPageBtn').disabled = data.page >= data.total_pages;
     }
 
+    function renderTableRows() {
+      const tbody = document.getElementById('hitsTableBody');
+      tbody.innerHTML = '';
+
+      if (cachedHits.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-8 text-center text-slate-500 font-sans">No matching hits found for the selected criteria.</td></tr>`;
+        return;
+      }
+
+      const queryGrna = document.getElementById('grnaInput').value.toUpperCase();
+
+      cachedHits.forEach((hit, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/70 cursor-pointer transition border-b border-slate-800/40 group";
+        tr.onclick = (e) => {
+          // Open Lock & Key inspector on row click
+          openLockAndKeyInspector(idx);
+        };
+
+        let seqHtml = '';
+        for (let i = 0; i < 20; i++) {
+          const char = hit.sequence[i] || 'N';
+          if (queryGrna[i] === char) {
+            seqHtml += `<span class="text-emerald-400 font-bold">${char}</span>`;
+          } else {
+            seqHtml += `<span class="text-rose-400 font-black bg-rose-500/25 px-0.5 rounded border border-rose-500/40">${char}</span>`;
+          }
+        }
+
+        let tierBadgeClass = "bg-slate-800 text-slate-400 border-slate-700";
+        let tierLabel = hit.cleavage_tier;
+        let cfdLabel = hit.cfd_score.toFixed(4);
+        let mitLabel = `${hit.mit_score.toFixed(1)}%`;
+
+        if (currentViewMode === 'simple') {
+          if (hit.mismatches === 0) {
+            tierBadgeClass = "bg-emerald-500/15 text-emerald-400 border-emerald-500/40";
+            tierLabel = "Exact On-Target";
+            cfdLabel = "100% Fit";
+            mitLabel = "100% Specific";
+          } else if (hit.cleavage_tier === "High") {
+            tierBadgeClass = "bg-rose-500/15 text-rose-400 border-rose-500/40";
+            tierLabel = "Dangerous Look-Alike";
+            cfdLabel = `High (${Math.round(hit.cfd_score * 100)}%)`;
+          } else if (hit.cleavage_tier === "Medium") {
+            tierBadgeClass = "bg-amber-500/15 text-amber-400 border-amber-500/40";
+            tierLabel = "Moderate Risk";
+            cfdLabel = `Medium (${Math.round(hit.cfd_score * 100)}%)`;
+          } else {
+            tierBadgeClass = "bg-slate-800 text-slate-300 border-slate-700";
+            tierLabel = "Weak Fit / Harmless";
+            cfdLabel = `Minimal (<10%)`;
+          }
+        } else {
+          if (hit.cleavage_tier === "High") {
+            tierBadgeClass = "bg-rose-500/15 text-rose-400 border-rose-500/40";
+          } else if (hit.cleavage_tier === "Medium") {
+            tierBadgeClass = "bg-amber-500/15 text-amber-400 border-amber-500/40";
+          } else if (hit.cleavage_tier === "Low") {
+            tierBadgeClass = "bg-emerald-500/15 text-emerald-400 border-emerald-500/40";
+          }
+        }
+
+        tr.innerHTML = `
+          <td class="px-4 py-3 font-sans text-slate-200 font-medium truncate max-w-[160px]">${hit.target_name}</td>
+          <td class="px-4 py-3 text-slate-400">${hit.start_pos} - ${hit.end_pos}</td>
+          <td class="px-4 py-3 text-center"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold">${hit.strand}</span></td>
+          <td class="px-4 py-3 tracking-wider font-mono">${seqHtml}</td>
+          <td class="px-4 py-3 text-center text-dna-purple font-bold">${hit.pam_sequence}</td>
+          <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full ${hit.mismatches === 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-300'} font-bold">${hit.mismatches}</span></td>
+          <td class="px-4 py-3 text-right font-medium text-slate-200">${mitLabel}</td>
+          <td class="px-4 py-3 text-right font-bold ${hit.cfd_score >= 0.5 ? 'text-rose-400' : (hit.cfd_score >= 0.1 ? 'text-amber-400' : 'text-emerald-400')}">${cfdLabel}</td>
+          <td class="px-4 py-3 text-center"><span class="px-2.5 py-0.5 text-[11px] rounded-full border ${tierBadgeClass} font-semibold">${tierLabel}</span></td>
+          <td class="px-4 py-3 text-center text-dna-cyan group-hover:text-white transition">
+            <span class="p-1 rounded hover:bg-slate-700" title="Inspect Lock & Key letter-by-letter">
+              <i class="fa-solid fa-magnifying-glass text-xs"></i>
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ------------------------------------------------------------------------
+    // Feature 2: "Lock-and-Key" Visual Fit Inspector Implementation
+    // ------------------------------------------------------------------------
+    function openLockAndKeyInspector(hitIndex) {
+      const hit = cachedHits[hitIndex];
+      if (!hit) return;
+
+      const queryGrna = document.getElementById('grnaInput').value.toUpperCase().trim();
+      const targetSeq = hit.sequence;
+      const pam = hit.pam_sequence;
+
+      // Header Subtitle & Pills
+      document.getElementById('modalLocusSubtitle').textContent = `Target: ${hit.target_name} | Coordinates: ${hit.start_pos}–${hit.end_pos} | Strand: ${hit.strand} | PAM: ${pam}`;
+      
+      const pill = document.getElementById('modalRiskPill');
+      if (hit.mismatches === 0) {
+        pill.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase";
+        pill.textContent = "EXACT FIT (ON-TARGET)";
+      } else if (hit.cleavage_tier === "High") {
+        pill.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 uppercase";
+        pill.textContent = "DANGEROUS LOOK-ALIKE";
+      } else if (hit.cleavage_tier === "Medium") {
+        pill.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 uppercase";
+        pill.textContent = "MODERATE RISK";
+      } else {
+        pill.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-300 border border-slate-700 uppercase";
+        pill.textContent = "WEAK / UNLIKELY FIT";
+      }
+
+      // Populate Letter Boxes for Key, Connector, Lock, Positions
+      const keyRow = document.getElementById('modalKeyRow');
+      const connRow = document.getElementById('modalConnectorRow');
+      const lockRow = document.getElementById('modalLockRow');
+      const pamBoxes = document.getElementById('modalPamBoxes');
+      const posRow = document.getElementById('modalPosRow');
+
+      keyRow.innerHTML = '';
+      connRow.innerHTML = '';
+      lockRow.innerHTML = '';
+      pamBoxes.innerHTML = '';
+      posRow.innerHTML = '';
+
+      const mismatchesList = [];
+      let seedMmCount = 0;
+      let distalMmCount = 0;
+
+      for (let i = 0; i < 20; i++) {
+        const pos = i + 1;
+        const kChar = queryGrna[i] || 'N';
+        const lChar = targetSeq[i] || 'N';
+        const isMatch = (kChar === lChar);
+        const isSeed = pos >= 13;
+
+        if (!isMatch) {
+          if (isSeed) seedMmCount++;
+          else distalMmCount++;
+          mismatchesList.push({ pos, guide: kChar, dna: lChar, isSeed });
+        }
+
+        // Key Box
+        const kBox = document.createElement('div');
+        kBox.className = `w-6 h-7 rounded flex items-center justify-center border transition ${isMatch ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40' : 'bg-rose-500/25 text-rose-300 border-rose-500/60 font-black animate-pulse'}`;
+        kBox.textContent = kChar;
+        keyRow.appendChild(kBox);
+
+        // Connector Box
+        const cBox = document.createElement('div');
+        cBox.className = `w-6 flex items-center justify-center ${isMatch ? 'text-emerald-400' : 'text-rose-400 font-black'}`;
+        cBox.innerHTML = isMatch ? '&#10003;' : '&#10005;';
+        connRow.appendChild(cBox);
+
+        // Lock Box
+        const lBox = document.createElement('div');
+        lBox.className = `w-6 h-7 rounded flex items-center justify-center border transition ${isMatch ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40' : 'bg-rose-500/25 text-rose-300 border-rose-500/60 font-black animate-pulse'}`;
+        lBox.textContent = lChar;
+        lockRow.appendChild(lBox);
+
+        // Pos Number
+        const pBox = document.createElement('div');
+        pBox.className = `w-6 text-center ${isSeed ? 'text-amber-400 font-bold' : 'text-slate-500'}`;
+        pBox.textContent = pos;
+        posRow.appendChild(pBox);
+      }
+
+      // PAM Clasp Letter Boxes
+      for (let p = 0; p < pam.length; p++) {
+        const pamChar = pam[p];
+        const pBox = document.createElement('div');
+        pBox.className = "w-6 h-7 rounded flex items-center justify-center bg-purple-500/20 text-dna-purple border border-purple-500/40 font-black";
+        pBox.textContent = pamChar;
+        pamBoxes.appendChild(pBox);
+      }
+
+      // Generate Plain-English Verdict
+      const vBox = document.getElementById('modalVerdictBox');
+      const vHeader = document.getElementById('modalVerdictHeader');
+      const vDesc = document.getElementById('modalVerdictDescription');
+
+      if (hit.mismatches === 0) {
+        vBox.className = "p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/5 space-y-1";
+        vHeader.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i><span class="text-emerald-400">Exact Fit — High Chance of Cutting Here</span>';
+        vDesc.textContent = "The 20-letter key matches the DNA lock with 100% letter-by-letter fidelity, and the canonical PAM clasp engages firmly. Cas9 will cut here with maximum cleavage efficiency.";
+      } else if (seedMmCount > 0 && hit.cfd_score < 0.15) {
+        vBox.className = "p-4 rounded-xl border border-amber-500/40 bg-amber-500/5 space-y-1";
+        vHeader.innerHTML = '<i class="fa-solid fa-circle-exclamation text-amber-400"></i><span class="text-amber-400">Seed Region Mismatch — Weak or Unlikely Fit</span>';
+        vDesc.textContent = `Cas9 detected ${hit.mismatches} wrong letter(s), with ${seedMmCount} located inside the critical PAM-proximal seed lock (positions 13-20). Seed mutations hinder R-loop unwinding, making cleavage weak or improbable.`;
+      } else if (distalMmCount > 0 && seedMmCount === 0) {
+        vBox.className = "p-4 rounded-xl border border-amber-500/50 bg-amber-500/10 space-y-1";
+        vHeader.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i><span class="text-amber-400">Distal Mismatch Look-Alike — Moderate to High Cutting Risk!</span>';
+        vDesc.textContent = `The ${distalMmCount} wrong letter(s) are all in the PAM-distal tail (positions 1-12). Because Cas9 tolerates mutations outside the seed zone, this look-alike site retains high affinity and risks unintended cutting!`;
+      } else if (hit.mismatches >= 3) {
+        vBox.className = "p-4 rounded-xl border border-slate-700 bg-slate-950/80 space-y-1";
+        vHeader.innerHTML = '<i class="fa-solid fa-circle-xmark text-slate-400"></i><span class="text-slate-300">Too Many Wrong Letters — Unlikely Fit</span>';
+        vDesc.textContent = `With ${hit.mismatches} mismatched letters across the sequence, Cas9 binding is highly unstable. Cleavage at this genomic locus is virtually negligible.`;
+      } else {
+        vBox.className = "p-4 rounded-xl border border-amber-500/40 bg-amber-500/5 space-y-1";
+        vHeader.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i><span class="text-amber-400">Look-Alike Spot with Partial Tolerance</span>';
+        vDesc.textContent = `${hit.mismatches} wrong letters detected. Review the substitution matrix below to determine if wobble base pairing (e.g. rG:dT) maintains cleavage potential.`;
+      }
+
+      // Scores Breakdown
+      document.getElementById('modalMmCount').textContent = `${hit.mismatches} / 20`;
+      document.getElementById('modalMmSubtext').textContent = hit.mismatches === 0 ? "100% exact letter match" : `${20 - hit.mismatches} matching letters, ${hit.mismatches} wrong`;
+      document.getElementById('modalCfdValue').textContent = hit.cfd_score.toFixed(4);
+      document.getElementById('modalCfdSubtext').textContent = `${Math.round(hit.cfd_score * 100)}% Cutting Frequency Determination`;
+      document.getElementById('modalMitValue').textContent = `${hit.mit_score.toFixed(1)}%`;
+
+      // Mismatches List
+      const listEl = document.getElementById('modalMismatchList');
+      if (mismatchesList.length === 0) {
+        listEl.innerHTML = '<div class="text-emerald-400 flex items-center space-x-1.5"><i class="fa-solid fa-check"></i><span>No mismatched letters. Complete canonical base pairing.</span></div>';
+      } else {
+        let listHtml = '';
+        mismatchesList.forEach(m => {
+          const zoneBadge = m.isSeed 
+            ? '<span class="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">Seed Lock (Pos 13-20)</span>' 
+            : '<span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 text-[10px]">PAM-Distal (Pos 1-12)</span>';
+          listHtml += `
+            <div class="flex items-center justify-between p-2 rounded bg-slate-900 border border-slate-800">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-rose-400">Position ${m.pos}:</span>
+                <span>Guide has <b class="text-brand-400 mono">${m.guide}</b> &rarr; DNA lock has <b class="text-rose-400 mono">${m.dna}</b></span>
+              </div>
+              ${zoneBadge}
+            </div>
+          `;
+        });
+        listEl.innerHTML = listHtml;
+      }
+
+      document.getElementById('lockAndKeyModal').classList.remove('hidden');
+    }
+
+    function closeLockAndKeyInspector() {
+      document.getElementById('lockAndKeyModal').classList.add('hidden');
+    }
+
+    // ------------------------------------------------------------------------
+    // Positional Heatmap Renderer
+    // ------------------------------------------------------------------------
     function renderHeatmap(hits) {
       const grid = document.getElementById('positionHeatmapGrid');
       grid.innerHTML = '';
@@ -1110,7 +2194,6 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
 
         for (const bSize of batches) {
           const t0 = performance.now();
-          // Simulate Hamming distance operations on bSize k-mers
           let dummyMatches = 0;
           for (let i = 0; i < bSize; i++) {
             let m = 0;
@@ -1158,6 +2241,17 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
 
       html += `</div>`;
       container.innerHTML = html;
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastMessage').textContent = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
     }
   </script>
 </body>
