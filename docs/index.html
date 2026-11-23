@@ -4,483 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GeneWeaver | GPU-Accelerated CRISPR Alignment Engine</title>
-  <script src="https://cdn.tailwindcss.com">
-    // ========================================================================
-    // FEATURE 1: "GRIP STRENGTH" (GC CONTENT & POLY-T) HEALTH METER
-    // ========================================================================
-    function updateGripStrengthMeter(seq) {
-      const cleanSeq = (seq || '').toUpperCase().replace(/[^ACGT]/g, '');
-      const len = cleanSeq.length;
-      const gcCount = (cleanSeq.match(/[GC]/g) || []).length;
-      const gcPct = len > 0 ? Math.round((gcCount / len) * 100) : 0;
-
-      const gcText = document.getElementById('gcPercentText');
-      const pin = document.getElementById('gcMarkerPin');
-      const badge = document.getElementById('gripStatusBadge');
-      const badgeText = document.getElementById('gripStatusBadgeText');
-      const banner = document.getElementById('gripExplanationBanner');
-      const icon = document.getElementById('gripExplanationIcon');
-      const desc = document.getElementById('gripExplanationText');
-      const polyAlert = document.getElementById('homopolymerAlert');
-      const polyText = document.getElementById('homopolymerAlertText');
-
-      if (!gcText || !pin) return;
-
-      gcText.textContent = `${gcPct}%`;
-      gcText.className = (gcPct >= 40 && gcPct <= 60) ? "text-emerald-400 font-bold" : (gcPct < 40 ? "text-amber-400 font-bold" : "text-purple-400 font-bold");
-      
-      const clampedPct = Math.max(0, Math.min(100, gcPct));
-      pin.style.left = `calc(${clampedPct}% - 5px)`;
-      pin.className = `absolute top-0 bottom-0 w-2.5 rounded-full shadow-lg transition-all duration-300 ${
-        gcPct >= 40 && gcPct <= 60 ? 'bg-emerald-400 shadow-emerald-400/50' : (gcPct < 40 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-purple-400 shadow-purple-400/50')
-      }`;
-
-      // Check for homopolymer / repeated tract warnings
-      const polyT = cleanSeq.match(/T{4,}/);
-      const polyG = cleanSeq.match(/G{4,}/);
-      const polyA = cleanSeq.match(/A{4,}/);
-      const polyC = cleanSeq.match(/C{4,}/);
-
-      if (polyT) {
-        polyAlert.classList.remove('hidden');
-        polyText.innerHTML = `<strong>🚨 Critical Pol-III Terminator Alert (${polyT[0]}):</strong> In standard U6/H1 expression vectors, 4 or more consecutive Thymines trigger premature RNA Polymerase III transcription stop, causing failed or truncated guide synthesis!`;
-      } else if (polyG) {
-        polyAlert.classList.remove('hidden');
-        polyText.innerHTML = `<strong>⚠️ Secondary Structure Alert (${polyG[0]}):</strong> 4 or more consecutive Guanines form stable G-quadruplex structures that can stall Cas9 loading and prevent target searching.`;
-      } else if (polyA || polyC) {
-        const tract = (polyA || polyC)[0];
-        polyAlert.classList.remove('hidden');
-        polyText.innerHTML = `<strong>⚠️ Homopolymer Run (${tract}):</strong> Repeated nucleotide tract may cause DNA polymerase slippage during guide cloning or synthesis.`;
-      } else {
-        polyAlert.classList.add('hidden');
-      }
-
-      // Plain-English Verdict
-      if (polyT) {
-        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 uppercase tracking-wide flex items-center space-x-1";
-        badgeText.textContent = "PRONE TO STALLING (TTTT)";
-        banner.className = "p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-start space-x-2 text-xs";
-        icon.className = "text-rose-400 mt-0.5 text-xs";
-        icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
-        desc.innerHTML = `<strong>Prone to Stalling:</strong> Contains a premature transcription termination signal (<strong>${polyT[0]}</strong>). Expression from standard Pol-III promoters (U6/H1) will abort prematurely before making full 20-nt guide.`;
-      } else if (polyG) {
-        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 uppercase tracking-wide flex items-center space-x-1";
-        badgeText.textContent = "G-QUADRUPLEX RISK (GGGG)";
-        banner.className = "p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start space-x-2 text-xs";
-        icon.className = "text-amber-400 mt-0.5 text-xs";
-        icon.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
-        desc.innerHTML = `<strong>Prone to Secondary Structure:</strong> Contains <strong>${polyG[0]}</strong> tract. Long G runs readily assemble into stable G-quadruplexes, blocking Cas9 ribonucleoprotein assembly.`;
-      } else if (gcPct < 40) {
-        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 uppercase tracking-wide flex items-center space-x-1";
-        badgeText.textContent = `TOO LOOSE (${gcPct}% GC)`;
-        banner.className = "p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start space-x-2 text-xs";
-        icon.className = "text-amber-400 mt-0.5 text-xs";
-        icon.innerHTML = '<i class="fa-solid fa-temperature-arrow-down"></i>';
-        desc.innerHTML = `<strong>Too Loose Grip:</strong> Only <strong>${gcPct}% GC</strong> (${gcCount}/${len} bp). Low GC content leads to a weak RNA:DNA duplex melting temperature, increasing the risk of unstable R-loop formation and sluggish or failed target cutting.`;
-      } else if (gcPct > 60) {
-        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase tracking-wide flex items-center space-x-1";
-        badgeText.textContent = `TOO STICKY (${gcPct}% GC)`;
-        banner.className = "p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-start space-x-2 text-xs";
-        icon.className = "text-purple-400 mt-0.5 text-xs";
-        icon.innerHTML = '<i class="fa-solid fa-temperature-arrow-up"></i>';
-        desc.innerHTML = `<strong>Too Sticky Grip:</strong> Elevated <strong>${gcPct}% GC</strong> (${gcCount}/${len} bp). High GC content creates an exceptionally tight hybrid lock, which can tolerate off-target mismatches elsewhere and form stubborn internal RNA hairpins.`;
-      } else {
-        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase tracking-wide flex items-center space-x-1";
-        badgeText.textContent = `BALANCED GRIP (${gcPct}% GC)`;
-        banner.className = "p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex items-start space-x-2 text-xs";
-        icon.className = "text-emerald-400 mt-0.5 text-xs";
-        icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
-        desc.innerHTML = `<strong>Balanced Grip:</strong> <strong>${gcPct}% GC</strong> (${gcCount}/${len} bp) lies right in the optimal 40%–60% window. Provides reliable thermodynamic stability for stable target unwinding and specific cleavage.`;
-      }
-    }
-
-    // ========================================================================
-    // FEATURE 2: INTERACTIVE "WHAT-IF LETTER SWAP" SANDBOX
-    // ========================================================================
-    let whatIfOriginalSeq = null;
-    let whatIfActivePos = null;
-
-    function renderWhatIfStrip() {
-      const container = document.getElementById('whatIfLetterTiles');
-      if (!container) return;
-
-      const input = document.getElementById('grnaInput');
-      const seq = (input.value || '').toUpperCase();
-
-      container.innerHTML = '';
-
-      for (let i = 0; i < 20; i++) {
-        const pos = i + 1;
-        const char = seq[i] || '-';
-        const isSeed = pos >= 13;
-        const isSelected = (whatIfActivePos === pos);
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.onclick = () => selectWhatIfTile(pos);
-
-        let borderClass = isSeed ? 'border-amber-500/50 bg-amber-500/10 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-200';
-        if (isSelected) {
-          borderClass = 'border-dna-cyan bg-dna-cyan/20 text-white ring-2 ring-dna-cyan';
-        }
-
-        btn.className = `flex flex-col items-center justify-center p-1 rounded-lg border transition hover:scale-105 active:scale-95 ${borderClass}`;
-        btn.title = `Position ${pos} (${isSeed ? 'Seed Region' : 'PAM-Distal'}) - Click to Swap`;
-
-        btn.innerHTML = `
-          <span class="text-[9px] font-mono opacity-60 leading-none">${pos}</span>
-          <span class="text-xs font-black mono mt-0.5 leading-none">${char}</span>
-        `;
-        container.appendChild(btn);
-      }
-    }
-
-    function selectWhatIfTile(pos) {
-      const input = document.getElementById('grnaInput');
-      const seq = input.value.toUpperCase();
-      if (pos < 1 || pos > 20 || pos > seq.length) return;
-
-      whatIfActivePos = pos;
-      const currentBase = seq[pos - 1];
-      const isSeed = pos >= 13;
-
-      document.getElementById('swapPosLabel').textContent = `#${pos}`;
-      document.getElementById('swapCurrentBase').textContent = currentBase;
-
-      const badge = document.getElementById('swapRegionBadge');
-      if (isSeed) {
-        badge.className = "text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40";
-        badge.textContent = "Seed Region (Pos 13-20)";
-      } else {
-        badge.className = "text-[10px] px-2 py-0.5 rounded bg-slate-800 text-dna-cyan font-semibold border border-dna-cyan/30";
-        badge.textContent = "PAM-Distal (Pos 1-12)";
-      }
-
-      document.getElementById('whatIfPickerContainer').classList.remove('hidden');
-      renderWhatIfStrip();
-    }
-
-    function closeWhatIfPicker() {
-      whatIfActivePos = null;
-      document.getElementById('whatIfPickerContainer').classList.add('hidden');
-      renderWhatIfStrip();
-    }
-
-    function executeWhatIfSwap(newBase) {
-      if (!whatIfActivePos) return;
-
-      const input = document.getElementById('grnaInput');
-      let seq = input.value.toUpperCase();
-      const posIdx = whatIfActivePos - 1;
-      const oldBase = seq[posIdx];
-
-      if (oldBase === newBase) {
-        showToast(`Position ${whatIfActivePos} is already ${newBase}`);
-        closeWhatIfPicker();
-        return;
-      }
-
-      if (!whatIfOriginalSeq) {
-        whatIfOriginalSeq = seq;
-        document.getElementById('whatIfResetBtn').classList.remove('hidden');
-      }
-
-      const prevTotal = cachedHits.length;
-      const prevHigh = cachedHits.filter(h => h.cleavage_tier === "High").length;
-
-      const newSeq = seq.substring(0, posIdx) + newBase + seq.substring(posIdx + 1);
-      input.value = newSeq;
-      handleGrnaInput(input);
-
-      const pam = document.getElementById('pamSelect').value;
-      const mm = parseInt(document.getElementById('mismatchRange').value, 10);
-      const fasta = document.getElementById('targetFasta').value || SAMPLE_CH19;
-
-      const res = runClientSideAlignment(newSeq, pam, mm, fasta);
-      cachedHits = res.hits;
-      currentJobId = "local_whatif_" + Date.now();
-
-      renderResults({
-        hits: cachedHits,
-        total_hits: cachedHits.length,
-        page: 1,
-        page_size: pageSize,
-        total_pages: Math.max(1, Math.ceil(cachedHits.length / pageSize))
-      });
-
-      const newTotal = cachedHits.length;
-      const newHigh = cachedHits.filter(h => h.cleavage_tier === "High").length;
-      const isSeed = whatIfActivePos >= 13;
-
-      const deltaHigh = newHigh - prevHigh;
-      const deltaTextHigh = deltaHigh === 0 ? "unchanged" : (deltaHigh < 0 ? `<strong class="text-emerald-400">${deltaHigh} (${prevHigh} → ${newHigh})</strong>` : `<strong class="text-rose-400">+${deltaHigh} (${prevHigh} → ${newHigh})</strong>`);
-
-      const deltaBanner = document.getElementById('whatIfDeltaBanner');
-      const deltaEl = document.getElementById('whatIfDeltaText');
-      deltaBanner.classList.remove('hidden');
-
-      deltaEl.innerHTML = `
-        <strong>What-If Swap Live:</strong> Position ${whatIfActivePos} (${isSeed ? 'Seed Region' : 'PAM-Distal'}) changed 
-        <strong class="text-amber-400 mono">${oldBase}</strong> &rarr; <strong class="text-emerald-400 mono">${newBase}</strong>. 
-        Total hits: <strong>${prevTotal} &rarr; ${newTotal}</strong> | High-risk look-alikes: ${deltaTextHigh}. 
-        ${isSeed ? 'Seed mutations directly alter Cas9 cutting probability at look-alike sites.' : 'Distal mutations modulate outer tail tolerance.'}
-      `;
-
-      closeWhatIfPicker();
-      showToast(`Position #${whatIfActivePos} swapped ${oldBase} → ${newBase}!`);
-    }
-
-    function resetWhatIfSandbox() {
-      if (!whatIfOriginalSeq) return;
-      const input = document.getElementById('grnaInput');
-      input.value = whatIfOriginalSeq;
-      handleGrnaInput(input);
-      whatIfOriginalSeq = null;
-      document.getElementById('whatIfResetBtn').classList.add('hidden');
-      document.getElementById('whatIfDeltaBanner').classList.add('hidden');
-      closeWhatIfPicker();
-      submitAlignmentJob();
-      showToast("Reset sequence back to original!");
-    }
-
-    // ========================================================================
-    // FEATURE 4: LOCAL "RECENT RUNS" COMPARISON DRAWER
-    // ========================================================================
-    const RECENT_RUNS_KEY = "geneweaver_recent_runs_v2";
-    let selectedRunsForCompare = new Set();
-
-    function initRecentRuns() {
-      renderRecentRunsList();
-    }
-
-    function getStoredRecentRuns() {
-      try {
-        const raw = localStorage.getItem(RECENT_RUNS_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch (e) {
-        return [];
-      }
-    }
-
-    function saveRecentRun(runData) {
-      let runs = getStoredRecentRuns();
-      runs = runs.filter(r => !(r.sequence === runData.sequence && r.pam === runData.pam));
-      runs.unshift(runData);
-      if (runs.length > 5) runs = runs.slice(0, 5);
-
-      try {
-        localStorage.setItem(RECENT_RUNS_KEY, JSON.stringify(runs));
-      } catch (e) {
-        console.warn("localStorage quota exceeded:", e);
-      }
-
-      renderRecentRunsList();
-    }
-
-    function renderRecentRunsList() {
-      const runs = getStoredRecentRuns();
-      const listEl = document.getElementById('recentRunsList');
-      const badgeNav = document.getElementById('recentRunsCounterBadge');
-      const badgeDrawer = document.getElementById('drawerRunCountBadge');
-
-      if (badgeNav) {
-        badgeNav.textContent = runs.length;
-        if (runs.length > 0) badgeNav.classList.remove('hidden');
-        else badgeNav.classList.add('hidden');
-      }
-
-      if (badgeDrawer) {
-        badgeDrawer.textContent = `${runs.length}/5`;
-      }
-
-      if (!listEl) return;
-
-      if (runs.length === 0) {
-        listEl.innerHTML = `
-          <div class="p-8 text-center text-slate-500 text-xs space-y-2">
-            <i class="fa-solid fa-clock-rotate-left text-2xl text-slate-600 block mb-1"></i>
-            <p>No recent alignment runs yet.</p>
-            <p class="text-[11px] text-slate-600">Execute an alignment or run a demo above to save runs automatically.</p>
-          </div>
-        `;
-        document.getElementById('drawerCompareActionBar').classList.add('hidden');
-        return;
-      }
-
-      listEl.innerHTML = '';
-
-      runs.forEach((run, idx) => {
-        const card = document.createElement('div');
-        const isChecked = selectedRunsForCompare.has(run.id);
-
-        let verdictBadge = "bg-slate-800 text-slate-400 border-slate-700";
-        if (run.verdict === "PASS") verdictBadge = "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
-        else if (run.verdict === "CAUTION") verdictBadge = "bg-amber-500/20 text-amber-400 border-amber-500/40";
-        else if (run.verdict === "FAIL") verdictBadge = "bg-rose-500/20 text-rose-400 border-rose-500/40";
-
-        card.className = `p-3.5 rounded-xl border transition space-y-2.5 ${isChecked ? 'bg-slate-900 border-dna-cyan' : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'}`;
-
-        card.innerHTML = `
-          <div class="flex items-start justify-between gap-2">
-            <div class="flex items-center space-x-2">
-              <input 
-                type="checkbox" 
-                id="chk_run_${run.id}" 
-                ${isChecked ? 'checked' : ''} 
-                onchange="handleRecentRunSelect(this, '${run.id}')"
-                class="rounded border-slate-700 bg-slate-900 text-dna-cyan focus:ring-dna-cyan cursor-pointer"
-                title="Select to compare head-to-head"
-              />
-              <span class="text-[11px] font-bold text-slate-400 font-mono">Run #${idx + 1}</span>
-              <span class="text-[10px] px-2 py-0.2 rounded-full border ${verdictBadge} font-bold">${run.verdict}</span>
-            </div>
-            <div class="flex items-center space-x-1.5">
-              <span class="text-[10px] text-slate-500 font-mono">${run.timeStr}</span>
-              <button onclick="deleteRecentRun('${run.id}')" class="text-slate-500 hover:text-rose-400 p-1 text-xs" title="Remove this run">&times;</button>
-            </div>
-          </div>
-
-          <div class="p-2 rounded bg-slate-900/90 border border-slate-800/80 font-mono text-xs text-brand-400 tracking-wider font-bold select-all break-all">
-            ${run.sequence}
-          </div>
-
-          <div class="grid grid-cols-3 gap-2 text-[10px] text-slate-400 font-mono pt-0.5">
-            <div>
-              <span class="text-slate-500 block">PAM / MM:</span>
-              <span class="text-slate-200 font-bold">${run.pam} (${run.mm} mm)</span>
-            </div>
-            <div>
-              <span class="text-slate-500 block">Hits / Risky:</span>
-              <span class="text-slate-200 font-bold">${run.totalHits} (${run.highRisk} high)</span>
-            </div>
-            <div>
-              <span class="text-slate-500 block">GC Content:</span>
-              <span class="text-emerald-400 font-bold">${run.gcContent}%</span>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between pt-1 border-t border-slate-800/60">
-            <span class="text-[10px] text-slate-500">MIT: ${run.mitScore}% &bull; CFD: ${run.cfdScore}</span>
-            <button 
-              type="button" 
-              onclick="reloadRecentRun('${run.id}')" 
-              class="px-2.5 py-1 text-xs rounded-lg bg-brand-600/20 hover:bg-brand-600/30 text-brand-300 border border-brand-500/30 font-semibold transition flex items-center space-x-1"
-            >
-              <i class="fa-solid fa-arrow-rotate-right text-[10px]"></i>
-              <span>Reload Run</span>
-            </button>
-          </div>
-        `;
-
-        listEl.appendChild(card);
-      });
-
-      updateDrawerCompareActionBar();
-    }
-
-    function toggleRecentRunsDrawer(open) {
-      const drawer = document.getElementById('recentRunsDrawer');
-      const backdrop = document.getElementById('recentRunsBackdrop');
-      if (!drawer || !backdrop) return;
-
-      if (open) {
-        drawer.classList.remove('translate-x-full');
-        backdrop.classList.remove('hidden');
-        renderRecentRunsList();
-      } else {
-        drawer.classList.add('translate-x-full');
-        backdrop.classList.add('hidden');
-      }
-    }
-
-    function handleRecentRunSelect(checkbox, id) {
-      if (checkbox.checked) {
-        if (selectedRunsForCompare.size >= 2) {
-          checkbox.checked = false;
-          showToast("You can only select up to 2 runs for head-to-head comparison.");
-          return;
-        }
-        selectedRunsForCompare.add(id);
-      } else {
-        selectedRunsForCompare.delete(id);
-      }
-      updateDrawerCompareActionBar();
-    }
-
-    function updateDrawerCompareActionBar() {
-      const bar = document.getElementById('drawerCompareActionBar');
-      const label = document.getElementById('drawerSelectCountText');
-      const btn = document.getElementById('drawerCompareBtn');
-      if (!bar) return;
-
-      const count = selectedRunsForCompare.size;
-      if (count > 0) {
-        bar.classList.remove('hidden');
-        label.textContent = `Selected: ${count}/2 runs`;
-        btn.disabled = (count !== 2);
-      } else {
-        bar.classList.add('hidden');
-      }
-    }
-
-    function compareSelectedRecentRuns() {
-      if (selectedRunsForCompare.size !== 2) return;
-      const ids = Array.from(selectedRunsForCompare);
-      const runs = getStoredRecentRuns();
-      const runA = runs.find(r => r.id === ids[0]);
-      const runB = runs.find(r => r.id === ids[1]);
-
-      if (!runA || !runB) return;
-
-      toggleRecentRunsDrawer(false);
-      toggleCompareMode(true);
-
-      document.getElementById('candAInput').value = runA.sequence;
-      document.getElementById('candBInput').value = runB.sequence;
-      handleCompareInput(document.getElementById('candAInput'), 'counterCandA');
-      handleCompareInput(document.getElementById('candBInput'), 'counterCandB');
-
-      submitHeadToHeadComparison();
-      showToast("Loaded both runs into Head-to-Head Comparison Scorecard!");
-    }
-
-    function reloadRecentRun(id) {
-      const runs = getStoredRecentRuns();
-      const run = runs.find(r => r.id === id);
-      if (!run) return;
-
-      toggleRecentRunsDrawer(false);
-      toggleCompareMode(false);
-
-      const input = document.getElementById('grnaInput');
-      input.value = run.sequence;
-      handleGrnaInput(input);
-
-      document.getElementById('pamSelect').value = run.pam;
-      document.getElementById('mismatchRange').value = run.mm;
-      document.getElementById('mismatchValBadge').textContent = `${run.mm} mm`;
-
-      submitAlignmentJob();
-      showToast(`Reloaded run: ${run.sequence}`);
-    }
-
-    function deleteRecentRun(id) {
-      let runs = getStoredRecentRuns();
-      runs = runs.filter(r => r.id !== id);
-      selectedRunsForCompare.delete(id);
-      localStorage.setItem(RECENT_RUNS_KEY, JSON.stringify(runs));
-      renderRecentRunsList();
-    }
-
-    function clearRecentRuns() {
-      if (!confirm("Are you sure you want to clear your saved runs history?")) return;
-      localStorage.removeItem(RECENT_RUNS_KEY);
-      selectedRunsForCompare.clear();
-      renderRecentRunsList();
-      showToast("Cleared all recent runs history.");
-    }
-
-  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
     tailwind.config = {
@@ -885,7 +409,72 @@
               </div>
             </div>
           </div>
-        </div>
+        
+          <!-- Feature 1: "Expected Edit Outcome" Preview Card -->
+          <div id="expectedOutcomeCard" class="mt-3 p-3.5 rounded-xl border border-brand-500/30 bg-slate-950/70 space-y-2.5 transition-all">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-brand-400"></i>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Expected Edit Outcome Preview</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span id="outcomeBadge" class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/40 uppercase tracking-wide">
+                  Frameshift Knockout Expected
+                </span>
+                <button 
+                  type="button" 
+                  onclick="toggleOutcomeDetailMode()" 
+                  id="outcomeModeToggleBtn"
+                  class="text-[10px] text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 transition"
+                  title="Toggle between plain-English takeaway and biophysical repair notes"
+                >
+                  <span id="outcomeModeToggleText">Technical Notes</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Cleavage Junction Architecture -->
+            <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
+              <div class="flex items-center space-x-1.5 text-[11px] font-mono">
+                <span class="text-slate-400">Target Cleavage:</span>
+                <span class="text-emerald-400 font-bold" id="outcomeBp17">bp 17</span>
+                <span class="text-amber-400 font-black text-xs" title="Predicted Cas9 Double-Strand Break (DSB)">✂</span>
+                <span class="text-emerald-400 font-bold" id="outcomeBp18">bp 18</span>
+                <span class="text-purple-400 font-bold pl-1">[PAM: <span id="outcomePamText">NGG</span>]</span>
+              </div>
+              <div class="flex items-center space-x-1.5 text-[10px]">
+                <button type="button" onclick="selectOutcomePreset('knockout')" id="btnOutcomeKnockout" class="px-2 py-0.5 rounded bg-brand-600 text-white font-semibold transition">Knockout Indel</button>
+                <button type="button" onclick="selectOutcomePreset('inframe')" id="btnOutcomeInframe" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">In-Frame Shift</button>
+                <button type="button" onclick="selectOutcomePreset('hdr')" id="btnOutcomeHdr" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">HDR Knock-In</button>
+              </div>
+            </div>
+
+            <!-- Plain English Outcome Explanation -->
+            <div id="outcomePlainEnglishBox" class="p-2.5 rounded-lg bg-slate-900/70 border border-slate-800 text-xs text-slate-300 space-y-1">
+              <div class="flex items-center space-x-1.5 text-emerald-400 font-bold text-[11px]">
+                <i class="fa-solid fa-circle-check"></i>
+                <span id="outcomeVerdictTitle">Gene Knockout / Frameshift Indel Expected</span>
+              </div>
+              <p id="outcomeVerdictDesc" class="text-[11px] leading-relaxed text-slate-300">
+                Cas9 cuts the DNA lock precisely between letter 17 and 18 (3 letters upstream of the PAM clasp). In human cells, natural error-prone repair (NHEJ) routinely inserts or deletes 1–2 letters (+1/-2 indel), scrambling downstream codons and permanently knocking the target gene OFF.
+              </p>
+            </div>
+
+            <!-- Optional Technical Biophysical Notes (Toggled) -->
+            <div id="outcomeTechnicalBox" class="hidden p-3 rounded-lg bg-dna-cyan/5 border border-dna-cyan/20 text-[11px] text-slate-300 space-y-1 font-mono">
+              <div class="text-dna-cyan font-bold flex items-center space-x-1.5 text-xs font-sans">
+                <i class="fa-solid fa-microscope text-dna-cyan"></i>
+                <span>Biophysical Repair Profile & Frameshift Probability</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px] pt-1">
+                <div>&bull; <strong>DSB Position:</strong> -3 bp relative to PAM (blunt / 1-nt 5' overhang)</div>
+                <div>&bull; <strong>Frameshift Frequency:</strong> ~70–85% out-of-frame nonsense indel bias in coding exons</div>
+                <div>&bull; <strong>Repair Pathway:</strong> NHEJ dominant in G1/S; MMEJ microdeletion risk at microhomologies</div>
+                <div>&bull; <strong>HDR Knock-In:</strong> Supply asymmetric ssODN donor template for precise gene correction</div>
+              </div>
+            </div>
+          </div>
+</div>
 
         <!-- Feature 2: Side-by-Side "Compare Two Keys" Input (Toggled) -->
         <div id="compareKeysContainer" class="hidden space-y-3 p-4 rounded-xl border border-dna-cyan/40 bg-slate-950/80">
@@ -970,6 +559,84 @@
               <span>5</span>
               <span>6</span>
             </div>
+
+            <!-- Feature 2: "Seed vs. Tail Strictness" Preset Buttons -->
+            <div class="mt-3 pt-3 border-t border-slate-800/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+                  <i class="fa-solid fa-filter-circle-dollar text-dna-cyan"></i>
+                  <span>Seed vs. Tail Strictness</span>
+                </label>
+                <span id="strictnessBadge" class="px-2 py-0.2 text-[10px] font-bold rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30 font-mono">
+                  Balanced Mode
+                </span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-1.5">
+                <!-- Strict Seed -->
+                <button 
+                  type="button" 
+                  onclick="applyStrictnessMode('strict')" 
+                  id="strictnessBtn_strict"
+                  class="p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition text-left space-y-0.5 group"
+                  title="Zero tolerance for mutations in Seed region (positions 13-20)"
+                >
+                  <div class="flex items-center space-x-1 text-xs font-bold text-slate-300 group-hover:text-emerald-400">
+                    <i class="fa-solid fa-shield-halved text-emerald-400 text-[11px]"></i>
+                    <span>Strict Seed</span>
+                  </div>
+                  <p class="text-[10px] text-slate-500 leading-tight">Pos 13–20 (2 mm)</p>
+                </button>
+
+                <!-- Balanced (Default) -->
+                <button 
+                  type="button" 
+                  onclick="applyStrictnessMode('balanced')" 
+                  id="strictnessBtn_balanced"
+                  class="p-2 rounded-xl border border-brand-500/50 bg-brand-500/10 transition text-left space-y-0.5 group"
+                  title="Standard biophysical Cas9 MIT & CFD cleavage weighting"
+                >
+                  <div class="flex items-center space-x-1 text-xs font-bold text-brand-400">
+                    <i class="fa-solid fa-scale-balanced text-brand-400 text-[11px]"></i>
+                    <span>Balanced</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 leading-tight">Standard (3 mm)</p>
+                </button>
+
+                <!-- Lenient Scan -->
+                <button 
+                  type="button" 
+                  onclick="applyStrictnessMode('lenient')" 
+                  id="strictnessBtn_lenient"
+                  class="p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:border-amber-500/50 hover:bg-amber-500/5 transition text-left space-y-0.5 group"
+                  title="Broad exploratory search allowing up to 5 mismatches"
+                >
+                  <div class="flex items-center space-x-1 text-xs font-bold text-slate-300 group-hover:text-amber-400">
+                    <i class="fa-solid fa-magnifying-glass-chart text-amber-400 text-[11px]"></i>
+                    <span>Lenient</span>
+                  </div>
+                  <p class="text-[10px] text-slate-500 leading-tight">Sweep (5 mm)</p>
+                </button>
+              </div>
+
+              <!-- Dynamic Strictness Explanation -->
+              <p id="strictnessExplanation" class="text-[10px] text-slate-400 italic">
+                Balanced: Standard biophysical Cas9 model (Hsu et al. MIT + Doench et al. CFD).
+              </p>
+            </div>
+
+            <!-- Feature 3: "Shifted Window" Neighbor Check Toggle -->
+            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+              <label class="relative inline-flex items-center cursor-pointer select-none">
+                <input type="checkbox" id="check1BaseShiftToggle" onchange="toggle1BaseShift(this.checked)" class="sr-only peer">
+                <div class="w-8 h-4.5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-brand-600"></div>
+                <span class="ml-2 text-xs font-semibold text-slate-300 flex items-center space-x-1">
+                  <i class="fa-solid fa-arrows-left-right text-brand-400 text-[10px]"></i>
+                  <span>Check 1-Base Shifts</span>
+                </span>
+              </label>
+              <span class="text-[10px] text-slate-500 font-mono">Slides key &plusmn;1 nt</span>
+            </div>
           </div>
         </div>
 
@@ -1012,6 +679,16 @@
               >
                 <i class="fa-solid fa-file-import"></i>
                 <span>Chr19</span>
+              </button>
+              <!-- Feature 3 Button: Multi-Region Batch FASTA -->
+              <button 
+                type="button" 
+                onclick="loadMultiRegionFasta()" 
+                class="px-2.5 py-1 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-dna-cyan border border-dna-cyan/40 transition flex items-center space-x-1"
+                title="Load a multi-region benchmark FASTA with 3 distinct target regions"
+              >
+                <i class="fa-solid fa-layer-group text-dna-cyan"></i>
+                <span>Multi-Region</span>
               </button>
             </div>
           </div>
@@ -1076,6 +753,45 @@
             placeholder=">chr19_locus&#10;GAGTCCGAGCAGAAGAAGAAGGGCTCGGCCCGGGCGCCCCTC..."
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-xs mono text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder-slate-700 transition"
           ></textarea>
+
+          <!-- Feature 1: "Forbidden Zone" Guardrail List (Protected DNA) -->
+          <div id="forbiddenZoneContainer" class="p-3.5 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2.5 transition-all">
+            <div class="flex items-center justify-between">
+              <label for="forbiddenZonesInput" class="text-xs font-semibold text-rose-300 uppercase tracking-wider flex items-center space-x-1.5">
+                <i class="fa-solid fa-shield-virus text-rose-400"></i>
+                <span>"Forbidden Zone" Guardrail List (Protected DNA)</span>
+              </label>
+              <span id="forbiddenZoneBadge" class="px-2 py-0.2 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono">
+                0 Protected Zones
+              </span>
+            </div>
+
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              Paste essential genomic spots (e.g. tumor suppressors or vital exons) that your guide key <strong>must never cut or match</strong>. GeneWeaver flags any alignment hit nearing these sequences with a prominent <strong>Protected Spot Alert</strong>.
+            </p>
+
+            <div class="relative">
+              <textarea 
+                id="forbiddenZonesInput" 
+                rows="2"
+                placeholder="Paste protected 20-nt sequences (one per line, e.g. GAGTCCGAGCAGAAGAAGTA)"
+                class="w-full bg-slate-950 border border-rose-500/40 rounded-xl px-3.5 py-2 text-xs mono text-rose-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500 uppercase transition"
+                oninput="handleForbiddenZonesInput(this)"
+              ></textarea>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="text-[10px] text-slate-400">Hits with &le; 2 mismatches to a forbidden snippet will be flagged.</span>
+              <button 
+                type="button" 
+                onclick="loadSampleForbiddenZone()" 
+                class="text-[11px] text-rose-300 hover:text-white px-2 py-0.5 rounded bg-slate-900 border border-rose-500/30 flex items-center space-x-1 transition shadow-sm"
+              >
+                <i class="fa-solid fa-shield-halved text-rose-400"></i>
+                <span>Load Sample Guardrail (TP53 / Homolog)</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Hardware & Submit -->
@@ -1291,7 +1007,55 @@
 
     <!-- Results Section (Visible after execution) -->
     <div id="resultsSection" class="space-y-6 hidden">
+
+      <!-- Feature 3: Multi-Region Batch Scan Breakdown (Auto-shown when >= 2 FASTA records detected) -->
+      <div id="multiRegionBreakdownSection" class="hidden bg-slate-900/70 rounded-2xl border border-dna-cyan/30 p-5 shadow-xl backdrop-blur-sm space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-7 h-7 rounded-lg bg-dna-cyan/20 border border-dna-cyan/40 text-dna-cyan flex items-center justify-center text-xs">
+              <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+                <span>Multi-Region FASTA Batch Breakdown</span>
+                <span id="multiRegionCountBadge" class="px-2 py-0.2 text-[10px] font-bold rounded-full bg-dna-cyan/20 text-dna-cyan border border-dna-cyan/40">3 Regions Scanned</span>
+              </h3>
+              <p class="text-[11px] text-slate-400">Click any region to filter the alignment hits table</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2 text-xs">
+            <button 
+              type="button" 
+              onclick="filterByFastaRegion('ALL')" 
+              id="btnFilterRegionAll" 
+              class="px-3 py-1 rounded-lg bg-brand-600 text-white font-semibold text-[11px] transition shadow flex items-center space-x-1"
+            >
+              <i class="fa-solid fa-list-check text-[10px]"></i>
+              <span>Show All Regions</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Region Cards Grid -->
+        <div id="multiRegionCardsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
       
+      <!-- Feature 3: Shifted Window Neighbor Check Alert Banner -->
+      <div id="shiftedNeighborAlertBanner" class="hidden p-3.5 rounded-2xl border border-amber-500/40 bg-amber-500/10 text-xs text-amber-300 flex items-start space-x-3 shadow-lg">
+        <i class="fa-solid fa-arrows-left-right text-amber-400 mt-0.5 text-base"></i>
+        <div class="flex-1 space-y-1">
+          <div class="font-bold text-amber-300 flex items-center space-x-2">
+            <span>Shifted Window Alert: Near-Miss Target Sliding Detected</span>
+            <span id="shiftedNeighborCountBadge" class="px-2 py-0.2 text-[9px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40">1 Near Miss</span>
+          </div>
+          <p id="shiftedNeighborAlertText" class="text-[11px] leading-relaxed text-slate-300">
+            Sliding the 20-letter key by 1 base left or right reveals a near-miss target lock in the reference genome. Review these spots to prevent adjacent off-target cutting.
+          </p>
+        </div>
+      </div>
+
       <!-- Feature 4 & Feature 1: Plain-English Summary Banner with Auto-Fix Key Optimizer Button -->
       <div id="summaryCard" class="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl backdrop-blur-sm space-y-4">
         
@@ -1421,25 +1185,53 @@
         </div>
       </div>
 
-      <!-- Mismatch Positional Distribution Heatmap -->
-      <div class="bg-slate-900/60 rounded-2xl border border-slate-800/80 p-6 shadow-xl backdrop-blur-sm space-y-4">
+      <!-- Feature 2: Position-by-Position Sensitivity Map -->
+      <div id="positionSensitivitySection" class="bg-slate-900/60 rounded-2xl border border-slate-800/80 p-6 shadow-xl backdrop-blur-sm space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
           <div>
             <h3 class="text-sm font-semibold text-slate-200 flex items-center space-x-2">
-              <i class="fa-solid fa-chart-column text-brand-400"></i>
-              <span>Mismatch Positional Frequency Matrix (Positions 1 to 20)</span>
+              <i class="fa-solid fa-chart-column text-dna-cyan"></i>
+              <span>Position-by-Position Sensitivity Map (Positions 1 to 20)</span>
             </h3>
-            <p class="text-xs text-slate-400 mt-0.5">Positions 13-20 represent the high-sensitivity Seed region proximal to PAM.</p>
+            <p class="text-xs text-slate-400 mt-0.5">Biophysical penalty weighting showing how heavily each individual letter position affects the fit score.</p>
           </div>
-          <div class="flex items-center space-x-3 text-xs">
-            <span class="flex items-center space-x-1 text-slate-400"><span class="w-3 h-3 rounded bg-slate-800 border border-slate-700"></span><span>PAM-Distal (1-12)</span></span>
-            <span class="flex items-center space-x-1 text-amber-400"><span class="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/60"></span><span>Seed Region (13-20)</span></span>
+          <div class="flex flex-wrap items-center gap-3 text-xs">
+            <span class="flex items-center space-x-1 text-slate-400">
+              <span class="w-3 h-3 rounded bg-slate-800 border border-slate-700"></span>
+              <span>Tail End (1–12): Low Sensitivity</span>
+            </span>
+            <span class="flex items-center space-x-1 text-amber-400">
+              <span class="w-3 h-3 rounded bg-amber-500/40 border border-amber-500/60"></span>
+              <span>Seed End (13–20): High Sensitivity</span>
+            </span>
+            <span class="flex items-center space-x-1 text-dna-purple font-semibold">
+              <i class="fa-solid fa-scissors text-amber-400 text-[10px]"></i>
+              <span>Cut bp 17|18</span>
+            </span>
           </div>
         </div>
 
-        <!-- 20-Position Visual Grid -->
-        <div id="positionHeatmapGrid" class="grid grid-cols-10 sm:grid-cols-20 gap-1.5 pt-2">
-          <!-- Dynamically populated 1..20 bars -->
+        <!-- 20-Column Interactive Bar Chart -->
+        <div id="positionSensitivityChart" class="grid grid-cols-10 sm:grid-cols-20 gap-1.5 pt-3 select-none">
+          <!-- Populated dynamically with 20 columns and bars -->
+        </div>
+
+        <!-- Plain Language Sensitivity Takeaway Banner -->
+        <div class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5 text-xs">
+          <div class="flex items-center space-x-2 text-slate-200 font-bold">
+            <i class="fa-solid fa-circle-info text-dna-cyan"></i>
+            <span>Plain-Language Key Sensitivity Summary</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] leading-relaxed text-slate-300">
+            <div class="p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <strong class="text-amber-300 block mb-0.5"><i class="fa-solid fa-shield-halved"></i> Seed End (Positions 13–20): High Sensitivity to Typos</strong>
+              Errors near the PAM clasp prevent Cas9 from unwinding the DNA helix. A single typo here severely drops fit score by 85%–98%, rendering cutting weak or impossible.
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+              <strong class="text-slate-300 block mb-0.5"><i class="fa-solid fa-feather"></i> Tail End (Positions 1–12): Low Sensitivity to Typos</strong>
+              Errors at the distal tail are widely tolerated by Cas9. Typos here cause only a minor 15%–35% drop in cutting score, meaning look-alikes with tail errors remain dangerous.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1501,6 +1293,8 @@
                 <th class="px-4 py-3">Coordinates</th>
                 <th class="px-4 py-3 text-center">Strand</th>
                 <th class="px-4 py-3">Aligned Protospacer (5' &rarr; 3')</th>
+                <th class="px-3 py-3 text-center">Risk Concentration (1–20)</th>
+          <th class="px-4 py-3 text-left">Fit Confidence & Rationale</th>
                 <th class="px-4 py-3 text-center">PAM</th>
                 <th class="px-4 py-3 text-center">MM</th>
                 <th class="px-4 py-3 text-right">MIT Score</th>
@@ -2185,7 +1979,10 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       const initGrna = document.getElementById('grnaInput').value;
       updateGripStrengthMeter(initGrna);
       renderWhatIfStrip();
+      updateExpectedOutcomePreview(el.value, document.getElementById('pamSelect').value);
       initRecentRuns();
+      updateExpectedOutcomePreview(initGrna, document.getElementById('pamSelect').value);
+      renderSensitivityMap([]);
 
       // Keyboard listener for modals and drawer (Escape key closes)
       document.addEventListener('keydown', (e) => {
@@ -2912,6 +2709,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       if (currentSeq.length > 0) {
         records.push({ header: currentHeader, seq: currentSeq.join('') });
       }
+      lastParsedFastaRecords = records;
 
       const pamLen = pam.length;
       const windowLen = 20 + pamLen;
@@ -3066,7 +2864,10 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
         updateJobStatusUI("RUNNING", 65, "Scanning PAM sites & computing MIT/CFD biophysical scores...");
         setTimeout(() => {
           const result = runClientSideAlignment(grna, pam, mm, fasta);
+          scanShiftedNeighbors(grna, pam, fasta);
           cachedHits = result.hits;
+          allUnfilteredHits = [...cachedHits];
+          currentRegionFilter = "ALL";
           currentJobId = "local_" + Date.now();
 
           updateJobStatusUI("COMPLETED", 100, "Alignment complete!");
@@ -3182,6 +2983,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       updateSummaryBanner();
       updateTableHeader();
       renderTableRows();
+      renderMultiRegionBreakdown(lastParsedFastaRecords, allUnfilteredHits.length ? allUnfilteredHits : cachedHits);
     }
 
     function updateSummaryBanner() {
@@ -3312,6 +3114,8 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
           <th class="px-4 py-3">Lock Coordinates</th>
           <th class="px-4 py-3 text-center">Strand & Cut Site</th>
           <th class="px-4 py-3">Key vs. Lock Fit (Distal 1-12 | Seed 13-20 | PAM)</th>
+          <th class="px-3 py-3 text-center">Risk Pattern (1–20)</th>
+          <th class="px-4 py-3 text-left">Fit Confidence & Rationale</th>
           <th class="px-4 py-3 text-center">Wrong Letters</th>
           <th class="px-4 py-3 text-right">Specificity Rating</th>
           <th class="px-4 py-3 text-right">Cutting Likelihood</th>
@@ -3324,6 +3128,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
           <th class="px-4 py-3">Coordinates</th>
           <th class="px-4 py-3 text-center">Strand & Cut Site</th>
           <th class="px-4 py-3">Aligned Protospacer (Distal 1-12 | Seed 13-20 | PAM)</th>
+          <th class="px-3 py-3 text-center">Risk Concentration (1–20)</th>
           <th class="px-4 py-3 text-center">MM</th>
           <th class="px-4 py-3 text-right">MIT Score</th>
           <th class="px-4 py-3 text-right">CFD Score</th>
@@ -3353,6 +3158,9 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       updateSummaryBanner();
       updateTableHeader();
       renderHeatmap(cachedHits);
+      evaluateForbiddenZones(cachedHits);
+      renderSensitivityMap(cachedHits);
+      updateShiftedAlertBanner();
       renderTableRows();
 
       document.getElementById('pageInfo').textContent = `Showing ${(data.page-1)*pageSize + 1}-${Math.min(data.page*pageSize, data.total_hits)} of ${data.total_hits}`;
@@ -3479,6 +3287,82 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
           ? `<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"><i class="fa-solid fa-arrow-right text-[8px]"></i><span>+ Forward (5'→3')</span></span>`
           : `<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/40"><i class="fa-solid fa-arrow-left text-[8px]"></i><span>- Reverse (3'←5')</span></span>`;
 
+        // Feature 4: Build 20-segment Risk Concentration Strip (Positions 1 to 20 + Cut Site)
+        let stripSegments = '';
+        let countSeedMm = 0;
+        let countDistalMm = 0;
+
+        for (let pos = 1; pos <= 20; pos++) {
+          const charGuide = queryGrna[pos - 1] || 'N';
+          const charTarget = hit.sequence[pos - 1] || 'N';
+          const isMatch = (charGuide === charTarget);
+          const isSeed = (pos >= 13);
+
+          if (!isMatch) {
+            if (isSeed) countSeedMm++;
+            else countDistalMm++;
+          }
+
+          let segColor = isMatch 
+            ? 'bg-emerald-500' 
+            : (isSeed ? 'bg-rose-500 ring-1 ring-amber-400' : 'bg-rose-500');
+
+          stripSegments += `<div class="w-1.5 h-3.5 rounded-[1px] ${segColor}" title="Pos ${pos} (${isSeed ? 'Seed' : 'Distal'}): Guide ${charGuide} vs DNA ${charTarget} (${isMatch ? 'Match' : 'Mismatch'})"></div>`;
+
+          if (pos === 17) {
+            stripSegments += `<div class="w-0.5 h-4 bg-amber-400 mx-[1px]" title="Cas9 Cleavage Site (bp 17/18)"></div>`;
+          }
+        }
+
+        let patternTag = "";
+        let patternClass = "";
+        if (hit.mismatches === 0) {
+          patternTag = "100% Homology";
+          patternClass = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+        } else if (countSeedMm >= 2) {
+          patternTag = `Clustered Seed (${countSeedMm} mm)`;
+          patternClass = "bg-slate-800 text-slate-300 border-slate-700";
+        } else if (countDistalMm > 0 && countSeedMm === 0) {
+          patternTag = `Distal Tail (${countDistalMm} mm)`;
+          patternClass = "bg-rose-500/20 text-rose-300 border-rose-500/30";
+        } else {
+          patternTag = `Scattered (${hit.mismatches} mm)`;
+          patternClass = "bg-amber-500/20 text-amber-300 border-amber-500/30";
+        }
+
+        // Feature 4: Plain-Language Fit Confidence Badge & Rationale
+        let fitConfidenceLabel = "Borderline Fit";
+        let fitConfidenceClass = "bg-amber-500/20 text-amber-400 border-amber-500/40";
+        let fitConfidenceIcon = '<i class="fa-solid fa-circle-exclamation text-[9px]"></i>';
+        let fitConfidenceReason = "";
+
+        if (hit.isForbiddenViolation) {
+          fitConfidenceLabel = "Protected Alert";
+          fitConfidenceClass = "bg-rose-500/25 text-rose-300 border-rose-500/60 animate-pulse";
+          fitConfidenceIcon = '<i class="fa-solid fa-triangle-exclamation text-rose-400 text-[9px]"></i>';
+          fitConfidenceReason = `Matches forbidden zone (${hit.forbiddenDist} mm to protected snippet)`;
+        } else if (hit.mismatches === 0) {
+          fitConfidenceLabel = "Strong Fit";
+          fitConfidenceClass = "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
+          fitConfidenceIcon = '<i class="fa-solid fa-circle-check text-emerald-400 text-[9px]"></i>';
+          fitConfidenceReason = "Exact 20/20 seed & distal lock match with canonical NGG PAM clasp";
+        } else if (hit.cfd_score >= 0.50 || (countDistalMm <= 2 && countSeedMm === 0)) {
+          fitConfidenceLabel = "Strong Fit";
+          fitConfidenceClass = "bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
+          fitConfidenceIcon = '<i class="fa-solid fa-shield-check text-emerald-400 text-[9px]"></i>';
+          fitConfidenceReason = `Intact seed lock (13-20) maintains high ${Math.round(hit.cfd_score*100)}% cutting affinity despite distal typos`;
+        } else if (countSeedMm >= 2 || hit.cfd_score < 0.10) {
+          fitConfidenceLabel = "Unlikely Fit";
+          fitConfidenceClass = "bg-slate-800 text-slate-300 border-slate-700";
+          fitConfidenceIcon = '<i class="fa-solid fa-ban text-slate-400 text-[9px]"></i>';
+          fitConfidenceReason = countSeedMm >= 2 ? `${countSeedMm} seed errors destabilize Cas9 R-loop; cleavage improbable` : "Low biophysical affinity score; minimal cleavage risk";
+        } else {
+          fitConfidenceLabel = "Borderline Fit";
+          fitConfidenceClass = "bg-amber-500/15 text-amber-300 border-amber-500/30";
+          fitConfidenceIcon = '<i class="fa-solid fa-triangle-exclamation text-amber-400 text-[9px]"></i>';
+          fitConfidenceReason = "Partial seed engagement; moderate look-alike cutting potential";
+        }
+
         tr.innerHTML = `
           <td class="px-4 py-3 font-sans text-slate-200 font-medium truncate max-w-[160px]">${hit.target_name}</td>
           <td class="px-4 py-3 text-slate-400 font-mono text-[11px]">${hit.start_pos} - ${hit.end_pos}</td>
@@ -3504,6 +3388,29 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
               </span>
               <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-500/20 text-dna-purple border border-purple-500/40 font-bold text-[11px]" title="PAM Motif">
                 ${hit.pam_sequence}
+              </span>
+            </div>
+          </td>
+          <!-- Feature 4: Risk Concentration 20-Segment Mini-Bar -->
+          <td class="px-3 py-3 text-center">
+            <div class="flex flex-col items-center space-y-1">
+              <div class="flex items-center space-x-[2px] p-1 bg-slate-950 rounded border border-slate-800" title="Positions 1-12 (Distal) | 13-20 (Seed) with cut site at 17|18">
+                ${stripSegments}
+              </div>
+              <span class="text-[9px] px-1.5 py-0.2 rounded border ${patternClass} font-semibold font-mono">
+                ${patternTag}
+              </span>
+            </div>
+          </td>
+          <!-- Feature 4: Plain-Language Fit Confidence Badge & Rationale -->
+          <td class="px-4 py-3 text-left">
+            <div class="flex flex-col space-y-1 max-w-[200px]">
+              <span class="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full border ${fitConfidenceClass} font-bold text-[10px] uppercase tracking-wider w-fit">
+                ${fitConfidenceIcon}
+                <span>${fitConfidenceLabel}</span>
+              </span>
+              <span class="text-[10px] text-slate-400 leading-tight">
+                ${fitConfidenceReason}
               </span>
             </div>
           </td>
@@ -3854,6 +3761,968 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
         toast.classList.add('translate-y-20', 'opacity-0');
       }, 3000);
     }
+  
+
+    // ========================================================================
+    // FEATURE 1: "GRIP STRENGTH" (GC CONTENT & POLY-T) HEALTH METER
+    // ========================================================================
+    function updateGripStrengthMeter(seq) {
+      const cleanSeq = (seq || '').toUpperCase().replace(/[^ACGT]/g, '');
+      const len = cleanSeq.length;
+      const gcCount = (cleanSeq.match(/[GC]/g) || []).length;
+      const gcPct = len > 0 ? Math.round((gcCount / len) * 100) : 0;
+
+      const gcText = document.getElementById('gcPercentText');
+      const pin = document.getElementById('gcMarkerPin');
+      const badge = document.getElementById('gripStatusBadge');
+      const badgeText = document.getElementById('gripStatusBadgeText');
+      const banner = document.getElementById('gripExplanationBanner');
+      const icon = document.getElementById('gripExplanationIcon');
+      const desc = document.getElementById('gripExplanationText');
+      const polyAlert = document.getElementById('homopolymerAlert');
+      const polyText = document.getElementById('homopolymerAlertText');
+
+      if (!gcText || !pin) return;
+
+      gcText.textContent = `${gcPct}%`;
+      gcText.className = (gcPct >= 40 && gcPct <= 60) ? "text-emerald-400 font-bold" : (gcPct < 40 ? "text-amber-400 font-bold" : "text-purple-400 font-bold");
+      
+      const clampedPct = Math.max(0, Math.min(100, gcPct));
+      pin.style.left = `calc(${clampedPct}% - 5px)`;
+      pin.className = `absolute top-0 bottom-0 w-2.5 rounded-full shadow-lg transition-all duration-300 ${
+        gcPct >= 40 && gcPct <= 60 ? 'bg-emerald-400 shadow-emerald-400/50' : (gcPct < 40 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-purple-400 shadow-purple-400/50')
+      }`;
+
+      // Check for homopolymer / repeated tract warnings
+      const polyT = cleanSeq.match(/T{4,}/);
+      const polyG = cleanSeq.match(/G{4,}/);
+      const polyA = cleanSeq.match(/A{4,}/);
+      const polyC = cleanSeq.match(/C{4,}/);
+
+      if (polyT) {
+        polyAlert.classList.remove('hidden');
+        polyText.innerHTML = `<strong>🚨 Critical Pol-III Terminator Alert (${polyT[0]}):</strong> In standard U6/H1 expression vectors, 4 or more consecutive Thymines trigger premature RNA Polymerase III transcription stop, causing failed or truncated guide synthesis!`;
+      } else if (polyG) {
+        polyAlert.classList.remove('hidden');
+        polyText.innerHTML = `<strong>⚠️ Secondary Structure Alert (${polyG[0]}):</strong> 4 or more consecutive Guanines form stable G-quadruplex structures that can stall Cas9 loading and prevent target searching.`;
+      } else if (polyA || polyC) {
+        const tract = (polyA || polyC)[0];
+        polyAlert.classList.remove('hidden');
+        polyText.innerHTML = `<strong>⚠️ Homopolymer Run (${tract}):</strong> Repeated nucleotide tract may cause DNA polymerase slippage during guide cloning or synthesis.`;
+      } else {
+        polyAlert.classList.add('hidden');
+      }
+
+      // Plain-English Verdict
+      if (polyT) {
+        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 uppercase tracking-wide flex items-center space-x-1";
+        badgeText.textContent = "PRONE TO STALLING (TTTT)";
+        banner.className = "p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-start space-x-2 text-xs";
+        icon.className = "text-rose-400 mt-0.5 text-xs";
+        icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        desc.innerHTML = `<strong>Prone to Stalling:</strong> Contains a premature transcription termination signal (<strong>${polyT[0]}</strong>). Expression from standard Pol-III promoters (U6/H1) will abort prematurely before making full 20-nt guide.`;
+      } else if (polyG) {
+        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 uppercase tracking-wide flex items-center space-x-1";
+        badgeText.textContent = "G-QUADRUPLEX RISK (GGGG)";
+        banner.className = "p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start space-x-2 text-xs";
+        icon.className = "text-amber-400 mt-0.5 text-xs";
+        icon.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+        desc.innerHTML = `<strong>Prone to Secondary Structure:</strong> Contains <strong>${polyG[0]}</strong> tract. Long G runs readily assemble into stable G-quadruplexes, blocking Cas9 ribonucleoprotein assembly.`;
+      } else if (gcPct < 40) {
+        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 uppercase tracking-wide flex items-center space-x-1";
+        badgeText.textContent = `TOO LOOSE (${gcPct}% GC)`;
+        banner.className = "p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start space-x-2 text-xs";
+        icon.className = "text-amber-400 mt-0.5 text-xs";
+        icon.innerHTML = '<i class="fa-solid fa-temperature-arrow-down"></i>';
+        desc.innerHTML = `<strong>Too Loose Grip:</strong> Only <strong>${gcPct}% GC</strong> (${gcCount}/${len} bp). Low GC content leads to a weak RNA:DNA duplex melting temperature, increasing the risk of unstable R-loop formation and sluggish or failed target cutting.`;
+      } else if (gcPct > 60) {
+        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase tracking-wide flex items-center space-x-1";
+        badgeText.textContent = `TOO STICKY (${gcPct}% GC)`;
+        banner.className = "p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-start space-x-2 text-xs";
+        icon.className = "text-purple-400 mt-0.5 text-xs";
+        icon.innerHTML = '<i class="fa-solid fa-temperature-arrow-up"></i>';
+        desc.innerHTML = `<strong>Too Sticky Grip:</strong> Elevated <strong>${gcPct}% GC</strong> (${gcCount}/${len} bp). High GC content creates an exceptionally tight hybrid lock, which can tolerate off-target mismatches elsewhere and form stubborn internal RNA hairpins.`;
+      } else {
+        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase tracking-wide flex items-center space-x-1";
+        badgeText.textContent = `BALANCED GRIP (${gcPct}% GC)`;
+        banner.className = "p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex items-start space-x-2 text-xs";
+        icon.className = "text-emerald-400 mt-0.5 text-xs";
+        icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        desc.innerHTML = `<strong>Balanced Grip:</strong> <strong>${gcPct}% GC</strong> (${gcCount}/${len} bp) lies right in the optimal 40%–60% window. Provides reliable thermodynamic stability for stable target unwinding and specific cleavage.`;
+      }
+    }
+
+    // ========================================================================
+    // FEATURE 2: INTERACTIVE "WHAT-IF LETTER SWAP" SANDBOX
+    // ========================================================================
+    let whatIfOriginalSeq = null;
+    let whatIfActivePos = null;
+
+    function renderWhatIfStrip() {
+      const container = document.getElementById('whatIfLetterTiles');
+      if (!container) return;
+
+      const input = document.getElementById('grnaInput');
+      const seq = (input.value || '').toUpperCase();
+
+      container.innerHTML = '';
+
+      for (let i = 0; i < 20; i++) {
+        const pos = i + 1;
+        const char = seq[i] || '-';
+        const isSeed = pos >= 13;
+        const isSelected = (whatIfActivePos === pos);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => selectWhatIfTile(pos);
+
+        let borderClass = isSeed ? 'border-amber-500/50 bg-amber-500/10 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-200';
+        if (isSelected) {
+          borderClass = 'border-dna-cyan bg-dna-cyan/20 text-white ring-2 ring-dna-cyan';
+        }
+
+        btn.className = `flex flex-col items-center justify-center p-1 rounded-lg border transition hover:scale-105 active:scale-95 ${borderClass}`;
+        btn.title = `Position ${pos} (${isSeed ? 'Seed Region' : 'PAM-Distal'}) - Click to Swap`;
+
+        btn.innerHTML = `
+          <span class="text-[9px] font-mono opacity-60 leading-none">${pos}</span>
+          <span class="text-xs font-black mono mt-0.5 leading-none">${char}</span>
+        `;
+        container.appendChild(btn);
+      }
+    }
+
+    function selectWhatIfTile(pos) {
+      const input = document.getElementById('grnaInput');
+      const seq = input.value.toUpperCase();
+      if (pos < 1 || pos > 20 || pos > seq.length) return;
+
+      whatIfActivePos = pos;
+      const currentBase = seq[pos - 1];
+      const isSeed = pos >= 13;
+
+      document.getElementById('swapPosLabel').textContent = `#${pos}`;
+      document.getElementById('swapCurrentBase').textContent = currentBase;
+
+      const badge = document.getElementById('swapRegionBadge');
+      if (isSeed) {
+        badge.className = "text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40";
+        badge.textContent = "Seed Region (Pos 13-20)";
+      } else {
+        badge.className = "text-[10px] px-2 py-0.5 rounded bg-slate-800 text-dna-cyan font-semibold border border-dna-cyan/30";
+        badge.textContent = "PAM-Distal (Pos 1-12)";
+      }
+
+      document.getElementById('whatIfPickerContainer').classList.remove('hidden');
+      renderWhatIfStrip();
+    }
+
+    function closeWhatIfPicker() {
+      whatIfActivePos = null;
+      document.getElementById('whatIfPickerContainer').classList.add('hidden');
+      renderWhatIfStrip();
+    }
+
+    function executeWhatIfSwap(newBase) {
+      if (!whatIfActivePos) return;
+
+      const input = document.getElementById('grnaInput');
+      let seq = input.value.toUpperCase();
+      const posIdx = whatIfActivePos - 1;
+      const oldBase = seq[posIdx];
+
+      if (oldBase === newBase) {
+        showToast(`Position ${whatIfActivePos} is already ${newBase}`);
+        closeWhatIfPicker();
+        return;
+      }
+
+      if (!whatIfOriginalSeq) {
+        whatIfOriginalSeq = seq;
+        document.getElementById('whatIfResetBtn').classList.remove('hidden');
+      }
+
+      const prevTotal = cachedHits.length;
+      const prevHigh = cachedHits.filter(h => h.cleavage_tier === "High").length;
+
+      const newSeq = seq.substring(0, posIdx) + newBase + seq.substring(posIdx + 1);
+      input.value = newSeq;
+      handleGrnaInput(input);
+
+      const pam = document.getElementById('pamSelect').value;
+      const mm = parseInt(document.getElementById('mismatchRange').value, 10);
+      const fasta = document.getElementById('targetFasta').value || SAMPLE_CH19;
+
+      const res = runClientSideAlignment(newSeq, pam, mm, fasta);
+      cachedHits = res.hits;
+      currentJobId = "local_whatif_" + Date.now();
+
+      renderResults({
+        hits: cachedHits,
+        total_hits: cachedHits.length,
+        page: 1,
+        page_size: pageSize,
+        total_pages: Math.max(1, Math.ceil(cachedHits.length / pageSize))
+      });
+
+      const newTotal = cachedHits.length;
+      const newHigh = cachedHits.filter(h => h.cleavage_tier === "High").length;
+      const isSeed = whatIfActivePos >= 13;
+
+      const deltaHigh = newHigh - prevHigh;
+      const deltaTextHigh = deltaHigh === 0 ? "unchanged" : (deltaHigh < 0 ? `<strong class="text-emerald-400">${deltaHigh} (${prevHigh} → ${newHigh})</strong>` : `<strong class="text-rose-400">+${deltaHigh} (${prevHigh} → ${newHigh})</strong>`);
+
+      const deltaBanner = document.getElementById('whatIfDeltaBanner');
+      const deltaEl = document.getElementById('whatIfDeltaText');
+      deltaBanner.classList.remove('hidden');
+
+      deltaEl.innerHTML = `
+        <strong>What-If Swap Live:</strong> Position ${whatIfActivePos} (${isSeed ? 'Seed Region' : 'PAM-Distal'}) changed 
+        <strong class="text-amber-400 mono">${oldBase}</strong> &rarr; <strong class="text-emerald-400 mono">${newBase}</strong>. 
+        Total hits: <strong>${prevTotal} &rarr; ${newTotal}</strong> | High-risk look-alikes: ${deltaTextHigh}. 
+        ${isSeed ? 'Seed mutations directly alter Cas9 cutting probability at look-alike sites.' : 'Distal mutations modulate outer tail tolerance.'}
+      `;
+
+      closeWhatIfPicker();
+      showToast(`Position #${whatIfActivePos} swapped ${oldBase} → ${newBase}!`);
+    }
+
+    function resetWhatIfSandbox() {
+      if (!whatIfOriginalSeq) return;
+      const input = document.getElementById('grnaInput');
+      input.value = whatIfOriginalSeq;
+      handleGrnaInput(input);
+      whatIfOriginalSeq = null;
+      document.getElementById('whatIfResetBtn').classList.add('hidden');
+      document.getElementById('whatIfDeltaBanner').classList.add('hidden');
+      closeWhatIfPicker();
+      submitAlignmentJob();
+      showToast("Reset sequence back to original!");
+    }
+
+    // ========================================================================
+    // FEATURE 4: LOCAL "RECENT RUNS" COMPARISON DRAWER
+    // ========================================================================
+    const RECENT_RUNS_KEY = "geneweaver_recent_runs_v2";
+    let selectedRunsForCompare = new Set();
+
+    function initRecentRuns() {
+      renderRecentRunsList();
+    }
+
+    function getStoredRecentRuns() {
+      try {
+        const raw = localStorage.getItem(RECENT_RUNS_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveRecentRun(runData) {
+      let runs = getStoredRecentRuns();
+      runs = runs.filter(r => !(r.sequence === runData.sequence && r.pam === runData.pam));
+      runs.unshift(runData);
+      if (runs.length > 5) runs = runs.slice(0, 5);
+
+      try {
+        localStorage.setItem(RECENT_RUNS_KEY, JSON.stringify(runs));
+      } catch (e) {
+        console.warn("localStorage quota exceeded:", e);
+      }
+
+      renderRecentRunsList();
+    }
+
+    function renderRecentRunsList() {
+      const runs = getStoredRecentRuns();
+      const listEl = document.getElementById('recentRunsList');
+      const badgeNav = document.getElementById('recentRunsCounterBadge');
+      const badgeDrawer = document.getElementById('drawerRunCountBadge');
+
+      if (badgeNav) {
+        badgeNav.textContent = runs.length;
+        if (runs.length > 0) badgeNav.classList.remove('hidden');
+        else badgeNav.classList.add('hidden');
+      }
+
+      if (badgeDrawer) {
+        badgeDrawer.textContent = `${runs.length}/5`;
+      }
+
+      if (!listEl) return;
+
+      if (runs.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-8 text-center text-slate-500 text-xs space-y-2">
+            <i class="fa-solid fa-clock-rotate-left text-2xl text-slate-600 block mb-1"></i>
+            <p>No recent alignment runs yet.</p>
+            <p class="text-[11px] text-slate-600">Execute an alignment or run a demo above to save runs automatically.</p>
+          </div>
+        `;
+        document.getElementById('drawerCompareActionBar').classList.add('hidden');
+        return;
+      }
+
+      listEl.innerHTML = '';
+
+      runs.forEach((run, idx) => {
+        const card = document.createElement('div');
+        const isChecked = selectedRunsForCompare.has(run.id);
+
+        let verdictBadge = "bg-slate-800 text-slate-400 border-slate-700";
+        if (run.verdict === "PASS") verdictBadge = "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
+        else if (run.verdict === "CAUTION") verdictBadge = "bg-amber-500/20 text-amber-400 border-amber-500/40";
+        else if (run.verdict === "FAIL") verdictBadge = "bg-rose-500/20 text-rose-400 border-rose-500/40";
+
+        card.className = `p-3.5 rounded-xl border transition space-y-2.5 ${isChecked ? 'bg-slate-900 border-dna-cyan' : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'}`;
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center space-x-2">
+              <input 
+                type="checkbox" 
+                id="chk_run_${run.id}" 
+                ${isChecked ? 'checked' : ''} 
+                onchange="handleRecentRunSelect(this, '${run.id}')"
+                class="rounded border-slate-700 bg-slate-900 text-dna-cyan focus:ring-dna-cyan cursor-pointer"
+                title="Select to compare head-to-head"
+              />
+              <span class="text-[11px] font-bold text-slate-400 font-mono">Run #${idx + 1}</span>
+              <span class="text-[10px] px-2 py-0.2 rounded-full border ${verdictBadge} font-bold">${run.verdict}</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <span class="text-[10px] text-slate-500 font-mono">${run.timeStr}</span>
+              <button onclick="deleteRecentRun('${run.id}')" class="text-slate-500 hover:text-rose-400 p-1 text-xs" title="Remove this run">&times;</button>
+            </div>
+          </div>
+
+          <div class="p-2 rounded bg-slate-900/90 border border-slate-800/80 font-mono text-xs text-brand-400 tracking-wider font-bold select-all break-all">
+            ${run.sequence}
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-[10px] text-slate-400 font-mono pt-0.5">
+            <div>
+              <span class="text-slate-500 block">PAM / MM:</span>
+              <span class="text-slate-200 font-bold">${run.pam} (${run.mm} mm)</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block">Hits / Risky:</span>
+              <span class="text-slate-200 font-bold">${run.totalHits} (${run.highRisk} high)</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block">GC Content:</span>
+              <span class="text-emerald-400 font-bold">${run.gcContent}%</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1 border-t border-slate-800/60">
+            <span class="text-[10px] text-slate-500">MIT: ${run.mitScore}% &bull; CFD: ${run.cfdScore}</span>
+            <button 
+              type="button" 
+              onclick="reloadRecentRun('${run.id}')" 
+              class="px-2.5 py-1 text-xs rounded-lg bg-brand-600/20 hover:bg-brand-600/30 text-brand-300 border border-brand-500/30 font-semibold transition flex items-center space-x-1"
+            >
+              <i class="fa-solid fa-arrow-rotate-right text-[10px]"></i>
+              <span>Reload Run</span>
+            </button>
+          </div>
+        `;
+
+        listEl.appendChild(card);
+      });
+
+      updateDrawerCompareActionBar();
+    }
+
+    function toggleRecentRunsDrawer(open) {
+      const drawer = document.getElementById('recentRunsDrawer');
+      const backdrop = document.getElementById('recentRunsBackdrop');
+      if (!drawer || !backdrop) return;
+
+      if (open) {
+        drawer.classList.remove('translate-x-full');
+        backdrop.classList.remove('hidden');
+        renderRecentRunsList();
+      } else {
+        drawer.classList.add('translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function handleRecentRunSelect(checkbox, id) {
+      if (checkbox.checked) {
+        if (selectedRunsForCompare.size >= 2) {
+          checkbox.checked = false;
+          showToast("You can only select up to 2 runs for head-to-head comparison.");
+          return;
+        }
+        selectedRunsForCompare.add(id);
+      } else {
+        selectedRunsForCompare.delete(id);
+      }
+      updateDrawerCompareActionBar();
+    }
+
+    function updateDrawerCompareActionBar() {
+      const bar = document.getElementById('drawerCompareActionBar');
+      const label = document.getElementById('drawerSelectCountText');
+      const btn = document.getElementById('drawerCompareBtn');
+      if (!bar) return;
+
+      const count = selectedRunsForCompare.size;
+      if (count > 0) {
+        bar.classList.remove('hidden');
+        label.textContent = `Selected: ${count}/2 runs`;
+        btn.disabled = (count !== 2);
+      } else {
+        bar.classList.add('hidden');
+      }
+    }
+
+    function compareSelectedRecentRuns() {
+      if (selectedRunsForCompare.size !== 2) return;
+      const ids = Array.from(selectedRunsForCompare);
+      const runs = getStoredRecentRuns();
+      const runA = runs.find(r => r.id === ids[0]);
+      const runB = runs.find(r => r.id === ids[1]);
+
+      if (!runA || !runB) return;
+
+      toggleRecentRunsDrawer(false);
+      toggleCompareMode(true);
+
+      document.getElementById('candAInput').value = runA.sequence;
+      document.getElementById('candBInput').value = runB.sequence;
+      handleCompareInput(document.getElementById('candAInput'), 'counterCandA');
+      handleCompareInput(document.getElementById('candBInput'), 'counterCandB');
+
+      submitHeadToHeadComparison();
+      showToast("Loaded both runs into Head-to-Head Comparison Scorecard!");
+    }
+
+    function reloadRecentRun(id) {
+      const runs = getStoredRecentRuns();
+      const run = runs.find(r => r.id === id);
+      if (!run) return;
+
+      toggleRecentRunsDrawer(false);
+      toggleCompareMode(false);
+
+      const input = document.getElementById('grnaInput');
+      input.value = run.sequence;
+      handleGrnaInput(input);
+
+      document.getElementById('pamSelect').value = run.pam;
+      document.getElementById('mismatchRange').value = run.mm;
+      document.getElementById('mismatchValBadge').textContent = `${run.mm} mm`;
+
+      submitAlignmentJob();
+      showToast(`Reloaded run: ${run.sequence}`);
+    }
+
+    function deleteRecentRun(id) {
+      let runs = getStoredRecentRuns();
+      runs = runs.filter(r => r.id !== id);
+      selectedRunsForCompare.delete(id);
+      localStorage.setItem(RECENT_RUNS_KEY, JSON.stringify(runs));
+      renderRecentRunsList();
+    }
+
+    function clearRecentRuns() {
+      if (!confirm("Are you sure you want to clear your saved runs history?")) return;
+      localStorage.removeItem(RECENT_RUNS_KEY);
+      selectedRunsForCompare.clear();
+      renderRecentRunsList();
+      showToast("Cleared all recent runs history.");
+    }
+
+  
+  
+
+    // ========================================================================
+    // FEATURE 1: "EXPECTED EDIT OUTCOME" PREVIEW CARD LOGIC
+    // ========================================================================
+    let currentOutcomeMode = 'simple'; // 'simple' or 'technical'
+    let currentOutcomePreset = 'knockout'; // 'knockout', 'inframe', 'hdr'
+
+    function toggleOutcomeDetailMode() {
+      currentOutcomeMode = (currentOutcomeMode === 'simple') ? 'technical' : 'simple';
+      const techBox = document.getElementById('outcomeTechnicalBox');
+      const toggleText = document.getElementById('outcomeModeToggleText');
+      if (currentOutcomeMode === 'technical') {
+        techBox.classList.remove('hidden');
+        toggleText.textContent = "Simple Terms";
+      } else {
+        techBox.classList.add('hidden');
+        toggleText.textContent = "Technical Notes";
+      }
+    }
+
+    function selectOutcomePreset(type) {
+      currentOutcomePreset = type;
+      const btnK = document.getElementById('btnOutcomeKnockout');
+      const btnI = document.getElementById('btnOutcomeInframe');
+      const btnH = document.getElementById('btnOutcomeHdr');
+
+      btnK.className = (type === 'knockout') ? "px-2 py-0.5 rounded bg-brand-600 text-white font-semibold transition" : "px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition";
+      btnI.className = (type === 'inframe') ? "px-2 py-0.5 rounded bg-dna-cyan text-slate-950 font-bold transition" : "px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition";
+      btnH.className = (type === 'hdr') ? "px-2 py-0.5 rounded bg-purple-600 text-white font-semibold transition" : "px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition";
+
+      const title = document.getElementById('outcomeVerdictTitle');
+      const desc = document.getElementById('outcomeVerdictDesc');
+      const badge = document.getElementById('outcomeBadge');
+
+      if (type === 'knockout') {
+        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/40 uppercase tracking-wide";
+        badge.textContent = "Frameshift Knockout Expected";
+        title.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i><span>Gene Knockout / Frameshift Indel (+1 / -2 bp)</span>';
+        desc.textContent = "Cas9 cuts between letter 17 and 18 (3 base pairs before the PAM clasp). Natural cellular repair (NHEJ) routinely introduces small 1-to-2 letter insertions or deletions, scrambling downstream amino acid codons and permanently knocking the target gene OFF.";
+      } else if (type === 'inframe') {
+        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-dna-cyan/20 text-dna-cyan border border-dna-cyan/40 uppercase tracking-wide";
+        badge.textContent = "In-Frame Deletion (3 bp)";
+        title.innerHTML = '<i class="fa-solid fa-scissors text-dna-cyan"></i><span>In-Frame Deletion / Codon Excision (-3 bp)</span>';
+        desc.textContent = "A 3-letter deletion occurs at the cut junction, removing exactly 1 single amino acid while keeping downstream codons intact. The resulting protein remains translated, potentially creating a hypomorph or functional alteration.";
+      } else if (type === 'hdr') {
+        badge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase tracking-wide";
+        badge.textContent = "Precision HDR Knock-In";
+        title.innerHTML = '<i class="fa-solid fa-code-merge text-purple-400"></i><span>Template-Directed Precision Knock-In (HDR)</span>';
+        desc.textContent = "When co-delivered with a single-stranded DNA donor template (ssODN), high-fidelity repair (HDR) copies the desired donor letters into the cut site without unwanted insertions or deletions, enabling point mutation repair or epitope tagging.";
+      }
+    }
+
+    function updateExpectedOutcomePreview(seq, pam) {
+      const clean = (seq || '').toUpperCase().replace(/[^ACGT]/g, '');
+      const bp17El = document.getElementById('outcomeBp17');
+      const bp18El = document.getElementById('outcomeBp18');
+      const pamEl = document.getElementById('outcomePamText');
+
+      if (!bp17El || !bp18El) return;
+
+      if (clean.length >= 18) {
+        bp17El.textContent = `bp 17 (${clean[16]})`;
+        bp18El.textContent = `bp 18 (${clean[17]})`;
+      } else {
+        bp17El.textContent = "bp 17";
+        bp18El.textContent = "bp 18";
+      }
+
+      if (pamEl) {
+        pamEl.textContent = pam || document.getElementById('pamSelect').value || 'NGG';
+      }
+    }
+
+    // ========================================================================
+    // FEATURE 2: "SEED VS. TAIL STRICTNESS" PRESET BUTTONS LOGIC
+    // ========================================================================
+    let currentStrictnessMode = 'balanced'; // 'strict', 'balanced', 'lenient'
+
+    function applyStrictnessMode(mode) {
+      currentStrictnessMode = mode;
+      const btnStrict = document.getElementById('strictnessBtn_strict');
+      const btnBalanced = document.getElementById('strictnessBtn_balanced');
+      const btnLenient = document.getElementById('strictnessBtn_lenient');
+      const badge = document.getElementById('strictnessBadge');
+      const exp = document.getElementById('strictnessExplanation');
+      const slider = document.getElementById('mismatchRange');
+      const valBadge = document.getElementById('mismatchValBadge');
+
+      btnStrict.className = "p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition text-left space-y-0.5 group";
+      btnBalanced.className = "p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:border-brand-500/50 hover:bg-brand-500/5 transition text-left space-y-0.5 group";
+      btnLenient.className = "p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:border-amber-500/50 hover:bg-amber-500/5 transition text-left space-y-0.5 group";
+
+      if (mode === 'strict') {
+        btnStrict.className = "p-2 rounded-xl border border-emerald-500/60 bg-emerald-500/10 transition text-left space-y-0.5 group";
+        badge.className = "px-2 py-0.2 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono";
+        badge.textContent = "Strict Seed (Max 2 mm)";
+        exp.textContent = "Strict Seed: Enforces zero tolerance for mutations in the critical 8-bp seed region (positions 13–20). Off-target sites with seed mismatches are suppressed.";
+        slider.value = 2;
+        valBadge.textContent = "2 mm";
+        showToast("Active: Strict Seed Mode (Max 2 mm, protected seed positions 13-20)");
+      } else if (mode === 'lenient') {
+        btnLenient.className = "p-2 rounded-xl border border-amber-500/60 bg-amber-500/10 transition text-left space-y-0.5 group";
+        badge.className = "px-2 py-0.2 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono";
+        badge.textContent = "Lenient Scan (Max 5 mm)";
+        exp.textContent = "Lenient Scan: Broad exploratory search allowing up to 5 mismatches across both seed and tail to catch weak low-affinity off-targets.";
+        slider.value = 5;
+        valBadge.textContent = "5 mm";
+        showToast("Active: Lenient Scan Mode (Max 5 mm exploratory sweep)");
+      } else {
+        btnBalanced.className = "p-2 rounded-xl border border-brand-500/60 bg-brand-500/10 transition text-left space-y-0.5 group";
+        badge.className = "px-2 py-0.2 text-[10px] font-bold rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30 font-mono";
+        badge.textContent = "Balanced Mode";
+        exp.textContent = "Balanced: Standard biophysical Cas9 model (Hsu et al. MIT + Doench et al. CFD) with up to 3 mismatches.";
+        slider.value = 3;
+        valBadge.textContent = "3 mm";
+        showToast("Active: Balanced Mode (Standard 3 mm biophysical weighting)");
+      }
+
+      // Re-trigger alignment
+      submitAlignmentJob();
+    }
+
+    // ========================================================================
+    // FEATURE 3: MULTI-REGION FASTA BATCH SCANNER LOGIC
+    // ========================================================================
+    const SAMPLE_MULTI_REGION_FASTA = `>Region_1_EMX1_Exon3 (On-Target Locus)
+GAGTCCGAGCAGAAGAAGAAGGGCTCGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC
+CTGCTGCCGCTGCTGCCGCCCCCGGCCCCCGAGGCCTGGGCCCAGGAGCTGCGCTCGCTG
+CGCGCGGCGCTGGAGGAGCTGGAGCAGCGCCTGGAGCGCCTGCAGCCCCGGCTGCCCGAG
+
+>Region_2_Homologous_Family_Pseudogene (Look-Alike Spot)
+GAGTCCGAGCAGAAGAAGTAGGGCGCGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGC
+CTGCTGCCGCTGCTGCCGCCCCCGGCCCCCGAGGCCTGGGCCCAGGAGCTGCGCTCGCT
+GAGTCCGAGCAGAAGAAGTATGGGCGCGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGG
+
+>Region_3_Unrelated_Intron_Control (Zero Match Control)
+TTTTTTTTTTTTTTTTTTTTCCCCCCCCCCCCCCCCCCCCAAAAAAAAAAAAAAAAAAAA
+ATATATATATATATATATATATATATATATATATATATATGCGCGCGCGCGCGCGCGCGC`;
+
+    let lastParsedFastaRecords = [];
+    let currentRegionFilter = "ALL";
+    let allUnfilteredHits = [];
+
+    function loadMultiRegionFasta() {
+      document.getElementById('targetFasta').value = SAMPLE_MULTI_REGION_FASTA;
+      document.getElementById('grnaInput').value = "GAGTCCGAGCAGAAGAAGAA";
+      handleGrnaInput(document.getElementById('grnaInput'));
+      showToast("Loaded 3 Multi-Region FASTA blocks! Running batch alignment...");
+      submitAlignmentJob();
+    }
+
+    function renderMultiRegionBreakdown(records, allHits) {
+      const section = document.getElementById('multiRegionBreakdownSection');
+      const grid = document.getElementById('multiRegionCardsGrid');
+      const badge = document.getElementById('multiRegionCountBadge');
+
+      if (!records || records.length < 2) {
+        if (section) section.classList.add('hidden');
+        return;
+      }
+
+      section.classList.remove('hidden');
+      badge.textContent = `${records.length} Regions Scanned`;
+      grid.innerHTML = '';
+
+      records.forEach((rec, idx) => {
+        const regionHits = allHits.filter(h => h.target_name === rec.header);
+        const exactHits = regionHits.filter(h => h.mismatches === 0);
+        const lookAlikeHits = regionHits.filter(h => h.mismatches > 0);
+        const isCurrentFilter = (currentRegionFilter === rec.header);
+
+        let statusBadge = "bg-slate-800 text-slate-400 border-slate-700";
+        let statusText = "0 Matches";
+        let statusIcon = "fa-circle-xmark";
+
+        if (exactHits.length > 0) {
+          statusBadge = "bg-emerald-500/20 text-emerald-400 border-emerald-500/40";
+          statusText = `${exactHits.length} Exact Match`;
+          statusIcon = "fa-circle-check";
+        } else if (lookAlikeHits.length > 0) {
+          statusBadge = "bg-amber-500/20 text-amber-400 border-amber-500/40";
+          statusText = `${lookAlikeHits.length} Look-Alikes`;
+          statusIcon = "fa-triangle-exclamation";
+        }
+
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-xl border transition cursor-pointer select-none space-y-2 ${
+          isCurrentFilter 
+            ? 'bg-dna-cyan/15 border-dna-cyan ring-2 ring-dna-cyan/50 shadow-lg' 
+            : 'bg-slate-950/80 border-slate-800 hover:border-dna-cyan/50'
+        }`;
+        card.onclick = () => filterByFastaRegion(rec.header);
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-1.5">
+            <div class="flex items-center space-x-1.5 min-w-0">
+              <span class="w-5 h-5 rounded bg-slate-800 text-dna-cyan flex items-center justify-center text-[10px] font-bold font-mono shrink-0">#${idx+1}</span>
+              <h4 class="text-xs font-bold text-white truncate font-sans" title="${rec.header}">${rec.header}</h4>
+            </div>
+            <span class="px-2 py-0.2 text-[9px] rounded-full border ${statusBadge} font-bold whitespace-nowrap flex items-center space-x-1">
+              <i class="fa-solid ${statusIcon} text-[8px]"></i>
+              <span>${statusText}</span>
+            </span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-1 text-[10px] text-slate-400 font-mono pt-1 border-t border-slate-800/80">
+            <div>
+              <span class="text-slate-500 block text-[9px]">Length:</span>
+              <span class="text-slate-200 font-bold">${rec.seq.length} bp</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[9px]">Exact:</span>
+              <span class="text-emerald-400 font-bold">${exactHits.length}</span>
+            </div>
+            <div>
+              <span class="text-slate-500 block text-[9px]">Look-Alikes:</span>
+              <span class="text-amber-400 font-bold">${lookAlikeHits.length}</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+            <span>${isCurrentFilter ? 'Active Filter' : 'Click to filter table'}</span>
+            <i class="fa-solid ${isCurrentFilter ? 'fa-filter-circle-xmark text-dna-cyan' : 'fa-arrow-right text-slate-600'}"></i>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function filterByFastaRegion(regionName) {
+      currentRegionFilter = regionName;
+      const btnAll = document.getElementById('btnFilterRegionAll');
+
+      if (regionName === "ALL") {
+        cachedHits = [...allUnfilteredHits];
+        if (btnAll) btnAll.className = "px-3 py-1 rounded-lg bg-brand-600 text-white font-semibold text-[11px] transition shadow";
+        showToast("Displaying hits across ALL regions.");
+      } else {
+        cachedHits = allUnfilteredHits.filter(h => h.target_name === regionName);
+        if (btnAll) btnAll.className = "px-3 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-semibold text-[11px] transition border border-slate-700";
+        showToast(`Filtered hits table to region: ${regionName}`);
+      }
+
+      renderResults({
+        hits: cachedHits,
+        total_hits: cachedHits.length,
+        page: 1,
+        page_size: pageSize,
+        total_pages: Math.max(1, Math.ceil(cachedHits.length / pageSize))
+      });
+
+      renderMultiRegionBreakdown(lastParsedFastaRecords, allUnfilteredHits);
+    }
+
+  
+
+    // ========================================================================
+    // FEATURE 1: "FORBIDDEN ZONE" GUARDRAIL LIST
+    // ========================================================================
+    let forbiddenZones = [];
+
+    function handleForbiddenZonesInput(el) {
+      const raw = el.value || '';
+      const lines = raw.split(/[\n,;]+/).map(s => s.trim().toUpperCase().replace(/[^ACGT]/g, '')).filter(s => s.length >= 10);
+      forbiddenZones = lines;
+      const countEl = document.getElementById('forbiddenZoneBadge');
+      if (countEl) {
+        countEl.textContent = `${forbiddenZones.length} Protected Zones`;
+        countEl.className = forbiddenZones.length > 0 
+          ? "px-2 py-0.2 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/50 font-mono animate-pulse"
+          : "px-2 py-0.2 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-mono";
+      }
+      if (cachedHits && cachedHits.length > 0) {
+        evaluateForbiddenZones(cachedHits);
+        renderTableRows();
+      }
+    }
+
+    function loadSampleForbiddenZone() {
+      const input = document.getElementById('forbiddenZonesInput');
+      input.value = "GAGTCCGAGCAGAAGAAGTA\nCCTCCCCCTACCCCCAATGA";
+      handleForbiddenZonesInput(input);
+      showToast("Loaded 2 protected forbidden sequences (TP53 homolog & Essential Exon)!");
+      submitAlignmentJob();
+    }
+
+    function evaluateForbiddenZones(hits) {
+      if (!forbiddenZones.length) {
+        hits.forEach(h => { h.isForbiddenViolation = false; });
+        return;
+      }
+
+      hits.forEach(hit => {
+        hit.isForbiddenViolation = false;
+        hit.forbiddenViolationName = "";
+        hit.forbiddenDist = 99;
+
+        for (let i = 0; i < forbiddenZones.length; i++) {
+          const fz = forbiddenZones[i];
+          const len = Math.min(20, Math.min(hit.sequence.length, fz.length));
+          let mm = 0;
+          for (let j = 0; j < len; j++) {
+            if (hit.sequence[j] !== fz[j]) mm++;
+          }
+          if (mm <= 2) {
+            hit.isForbiddenViolation = true;
+            hit.forbiddenViolationName = `Forbidden Zone #${i+1}`;
+            hit.forbiddenDist = mm;
+            break;
+          }
+        }
+      });
+    }
+
+    // ========================================================================
+    // FEATURE 2: POSITION-BY-POSITION SENSITIVITY MAP
+    // ========================================================================
+    // Hsu et al. 2013 & Doench et al. 2016 biophysical mismatch cleavage penalties:
+    const POSITIONAL_SENSITIVITY_WEIGHTS = [
+      0.15, 0.18, 0.20, 0.22, 0.28, 0.32, 0.35, 0.40, 0.42, 0.45, 0.48, 0.52, // Distal 1-12
+      0.78, 0.84, 0.88, 0.92, 0.95, 0.96, 0.98, 0.98                           // Seed 13-20
+    ];
+
+    function renderSensitivityMap(hits) {
+      const container = document.getElementById('positionSensitivityChart');
+      if (!container) return;
+
+      container.innerHTML = '';
+      const totalHits = hits.length;
+
+      // Count observed mismatches per position in current run
+      const posMmCounts = new Array(20).fill(0);
+      const query = document.getElementById('grnaInput').value.toUpperCase();
+
+      hits.forEach(hit => {
+        for (let i = 0; i < 20; i++) {
+          if (hit.sequence[i] && query[i] && hit.sequence[i] !== query[i]) {
+            posMmCounts[i]++;
+          }
+        }
+      });
+
+      for (let pos = 1; pos <= 20; pos++) {
+        const idx = pos - 1;
+        const weight = POSITIONAL_SENSITIVITY_WEIGHTS[idx];
+        const penaltyPct = Math.round(weight * 100);
+        const mmCount = posMmCounts[idx];
+        const isSeed = (pos >= 13);
+        const isCutSite = (pos === 17 || pos === 18);
+
+        const col = document.createElement('div');
+        col.className = "flex flex-col items-center space-y-1 group relative cursor-pointer";
+
+        // Bar height represents sensitivity penalty (clamped 15% to 100%)
+        const barHeight = Math.max(12, Math.round(penaltyPct * 0.75));
+        const barColor = isSeed 
+          ? (isCutSite ? 'bg-gradient-to-t from-amber-500 to-rose-500 shadow-sm shadow-rose-500/30' : 'bg-gradient-to-t from-amber-600 to-amber-400')
+          : 'bg-gradient-to-t from-slate-700 to-dna-cyan';
+
+        col.innerHTML = `
+          <!-- Bar Track -->
+          <div class="w-full h-20 bg-slate-950 rounded-lg flex items-end justify-center p-1 border border-slate-800 group-hover:border-dna-cyan transition">
+            <div class="w-full rounded ${barColor} transition-all duration-300" style="height: ${barHeight}px;"></div>
+          </div>
+
+          <!-- Position Number -->
+          <span class="text-[10px] font-mono font-bold ${isSeed ? 'text-amber-400' : 'text-slate-400'}">${pos}</span>
+
+          <!-- Cut Site Scissors at pos 17 -->
+          ${pos === 17 ? '<span class="absolute -top-3 text-[9px] text-amber-400 font-bold" title="Cas9 Cut Site (bp 17/18)">✂</span>' : ''}
+
+          <!-- Hover Tooltip -->
+          <div class="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-30 pointer-events-none w-36 p-2 rounded-lg bg-slate-900 border border-slate-700 shadow-2xl text-[10px] text-slate-300">
+            <span class="font-bold text-white">Position ${pos} (${isSeed ? 'Seed' : 'Tail'})</span>
+            <span class="${isSeed ? 'text-amber-400' : 'text-dna-cyan'} font-semibold">-${penaltyPct}% fit penalty</span>
+            <span class="text-slate-400">${mmCount} mismatch(es) in run</span>
+          </div>
+        `;
+
+        container.appendChild(col);
+      }
+    }
+
+    // ========================================================================
+    // FEATURE 3: "SHIFTED WINDOW" NEIGHBOR CHECK
+    // ========================================================================
+    let check1BaseShiftActive = false;
+    let shiftedNeighborHits = [];
+
+    function toggle1BaseShift(active) {
+      check1BaseShiftActive = active;
+      showToast(active ? "1-Base Shift Check enabled (scanning ±1 nt windows)" : "1-Base Shift Check disabled");
+      submitAlignmentJob();
+    }
+
+    function scanShiftedNeighbors(guide, pam, fastaText) {
+      shiftedNeighborHits = [];
+      if (!check1BaseShiftActive) return;
+
+      const lines = fastaText.split('\n');
+      let seq = "";
+      for (const line of lines) {
+        if (!line.trim().startsWith('>')) seq += line.trim().toUpperCase().replace(/[^ACGT]/g, '');
+      }
+
+      const pamLen = pam.length;
+      for (let i = 21; i < seq.length - pamLen - 1; i++) {
+        // Shift -1 bp (left)
+        const leftWindow = seq.substring(i - 21, i - 1);
+        const pamCandidate = seq.substring(i - 1, i - 1 + pamLen);
+
+        if (isPamMatchClient(pamCandidate, pam)) {
+          let mm = 0;
+          for (let j = 0; j < 20; j++) {
+            if (leftWindow[j] !== guide[j]) mm++;
+          }
+          if (mm <= 2) {
+            shiftedNeighborHits.push({
+              pos: i - 21,
+              shift: "-1 bp (slid left)",
+              seq: leftWindow,
+              pam: pamCandidate,
+              mm: mm
+            });
+          }
+        }
+
+        // Shift +1 bp (right)
+        const rightWindow = seq.substring(i - 19, i + 1);
+        const pamRight = seq.substring(i + 1, i + 1 + pamLen);
+
+        if (isPamMatchClient(pamRight, pam)) {
+          let mm = 0;
+          for (let j = 0; j < 20; j++) {
+            if (rightWindow[j] !== guide[j]) mm++;
+          }
+          if (mm <= 2) {
+            shiftedNeighborHits.push({
+              pos: i - 19,
+              shift: "+1 bp (slid right)",
+              seq: rightWindow,
+              pam: pamRight,
+              mm: mm
+            });
+          }
+        }
+      }
+    }
+
+    function isPamMatchClient(cand, pamPattern) {
+      if (cand.length !== pamPattern.length) return false;
+      for (let i = 0; i < pamPattern.length; i++) {
+        const p = pamPattern[i];
+        const c = cand[i];
+        if (p === 'N') continue;
+        if (p === 'G' && c !== 'G') return false;
+        if (p === 'A' && c !== 'A') return false;
+        if (p === 'C' && c !== 'C') return false;
+        if (p === 'T' && c !== 'T') return false;
+      }
+      return true;
+    }
+
+    function updateShiftedAlertBanner() {
+      const banner = document.getElementById('shiftedNeighborAlertBanner');
+      const badge = document.getElementById('shiftedNeighborCountBadge');
+      const text = document.getElementById('shiftedNeighborAlertText');
+
+      if (!check1BaseShiftActive || shiftedNeighborHits.length === 0) {
+        if (banner) banner.classList.add('hidden');
+        return;
+      }
+
+      banner.classList.remove('hidden');
+      badge.textContent = `${shiftedNeighborHits.length} Near Misses`;
+      const first = shiftedNeighborHits[0];
+      text.innerHTML = `
+        Detected <strong>${shiftedNeighborHits.length} near-miss spot(s)</strong> when sliding the 20-letter key &plusmn;1 base left or right! 
+        Example: At position ${first.pos} (<strong>${first.shift}</strong>), sequence <strong class="mono text-brand-400">${first.seq}</strong> has a valid <strong class="text-dna-purple">${first.pam}</strong> PAM with only ${first.mm} mismatch(es).
+      `;
+    }
+
   </script>
   <!-- Feature 4: Local "Recent Runs" Comparison Drawer Backdrop -->
   <div id="recentRunsBackdrop" onclick="toggleRecentRunsDrawer(false)" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity"></div>
