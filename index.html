@@ -279,9 +279,30 @@
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
                 <span>Optimize Key</span>
               </button>
+              <button 
+                type="button" 
+                onclick="pinCurrentKey()" 
+                id="pinKeyBtn" 
+                class="text-xs text-amber-400 hover:text-amber-300 flex items-center space-x-1 transition"
+                title="Pin up to 4 favorite 20-letter keys in the quick bar"
+              >
+                <i class="fa-solid fa-thumbtack text-amber-400"></i>
+                <span>Pin Key</span>
+              </button>
               <span id="grnaLengthCounter" class="text-xs mono text-slate-400 font-semibold">20/20 nt</span>
             </div>
           </div>
+          <!-- Feature 4: "Pinned Keys" Quick Bar -->
+          <div id="pinnedKeysBar" class="mb-2 p-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-2 overflow-x-auto select-none">
+            <div class="flex items-center space-x-1.5 text-xs text-slate-400 shrink-0">
+              <i class="fa-solid fa-thumbtack text-amber-400 text-[10px]"></i>
+              <span class="text-[11px] font-semibold text-slate-300">Pinned Keys:</span>
+            </div>
+            <div id="pinnedKeysList" class="flex items-center gap-1.5 flex-1 overflow-x-auto py-0.5">
+              <!-- Populated dynamically: up to 4 pills -->
+            </div>
+          </div>
+
           <div class="relative">
             <input 
               type="text" 
@@ -298,6 +319,73 @@
           </div>
           <p class="text-xs text-slate-500 mt-1.5">Rule: Must be exactly 20 letters using only nucleotides A, C, G, T.</p>
 
+          <div class="mt-2 flex items-center justify-between">
+            <button 
+              type="button" 
+              onclick="toggleFlippedPartner()" 
+              id="toggleFlippedPartnerBtn"
+              class="text-xs text-dna-cyan hover:text-cyan-300 flex items-center space-x-1.5 transition px-2.5 py-1 rounded-lg bg-dna-cyan/10 border border-dna-cyan/30"
+              title="Test whether the reverse-complement flipped partner could accidentally bind to the Reference Genome"
+            >
+              <i class="fa-solid fa-arrows-rotate text-dna-cyan text-[11px]" id="flippedToggleIcon"></i>
+              <span>Test Flipped Partner</span>
+            </button>
+            <span class="text-[10px] text-slate-500 font-mono">Checks 5'&rarr;3' reverse-complement</span>
+          </div>
+
+          <!-- Feature 1 Card: Flipped Partner Scan -->
+          <div id="flippedPartnerCard" class="hidden mt-2.5 p-3.5 rounded-xl border border-dna-cyan/30 bg-slate-950/70 space-y-2.5 transition-all">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-arrows-rotate text-dna-cyan"></i>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Flipped Partner (Reverse-Complement) Scan</span>
+              </div>
+              <div id="flippedPartnerStatusBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                Inert Flipped Partner
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                <span class="text-[10px] text-slate-400 uppercase font-bold block mb-0.5">Active Target Key (5' &rarr; 3')</span>
+                <span id="flippedActiveKeySeq" class="font-mono text-xs text-brand-400 font-bold tracking-wider">GAGTCCGAGCAGAAGAAGAA</span>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-900 border border-dna-cyan/40">
+                <span class="text-[10px] text-dna-cyan uppercase font-bold block mb-0.5">Flipped Partner (5' &rarr; 3' RC)</span>
+                <span id="flippedPartnerSeq" class="font-mono text-xs text-dna-cyan font-bold tracking-wider">TTCTTCTTCTGCTCGGACTC</span>
+              </div>
+            </div>
+
+            <!-- Alignment scan summary -->
+            <div id="flippedScanSummary" class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div class="flex items-center space-x-3 text-[11px]">
+                <span>Flipped Hits: <strong id="flippedHitCount" class="text-white">0</strong></span>
+                <span>Exact Locks: <strong id="flippedExactCount" class="text-white">0</strong></span>
+                <span>High-Risk Spots: <strong id="flippedHighCount" class="text-emerald-400">0</strong></span>
+              </div>
+              <button 
+                type="button" 
+                onclick="loadFlippedAsActiveKey()" 
+                class="px-2.5 py-1 text-[11px] rounded-lg bg-dna-cyan/20 hover:bg-dna-cyan/30 text-dna-cyan border border-dna-cyan/40 transition font-semibold flex items-center space-x-1"
+                title="Swap the reverse-complement into the target guide input"
+              >
+                <i class="fa-solid fa-arrow-up-from-bracket text-[10px]"></i>
+                <span>Load Flipped as Active Key</span>
+              </button>
+            </div>
+
+            <!-- Plain-English Explanation -->
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+              <div class="flex items-center space-x-1.5 text-dna-cyan font-bold text-xs">
+                <i class="fa-solid fa-circle-question text-dna-cyan"></i>
+                <span>Why Check the Flipped Partner? (Sense vs. Antisense Accidental Fit)</span>
+              </div>
+              <p id="flippedExplanationText" class="text-slate-400 leading-relaxed text-[10px]">
+                A CRISPR guide key anneals to the complementary strand of duplex DNA. If the flipped (reverse-complement) sequence can also find a matching target with an adjacent PAM clasp, unintended cutting can occur on the opposite DNA orientation or create dangerous chromosomal inversion events.
+              </p>
+            </div>
+          </div>
+
           <!-- Feature 1: "Grip Strength" (GC Content & Poly-T) Health Meter -->
           <div id="gripStrengthWidget" class="mt-3 p-3.5 rounded-xl border border-slate-800 bg-slate-950/70 space-y-2.5 transition-all">
             <div class="flex items-center justify-between">
@@ -305,9 +393,15 @@
                 <i class="fa-solid fa-hand-fist text-brand-400"></i>
                 <span>"Grip Strength" Health Meter</span>
               </label>
-              <div id="gripStatusBadge" class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase tracking-wide flex items-center space-x-1">
-                <i class="fa-solid fa-circle-check"></i>
-                <span id="gripStatusBadgeText">Balanced Grip (50% GC)</span>
+              <div class="flex items-center space-x-1.5">
+                <div id="patternRepeatBadge" class="hidden px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wide flex items-center space-x-1">
+                  <i class="fa-solid fa-repeat text-amber-400 text-[9px]"></i>
+                  <span id="patternRepeatBadgeText">Pattern Repeat Alert</span>
+                </div>
+                <div id="gripStatusBadge" class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase tracking-wide flex items-center space-x-1">
+                  <i class="fa-solid fa-circle-check"></i>
+                  <span id="gripStatusBadgeText">Balanced Grip (50% GC)</span>
+                </div>
               </div>
             </div>
 
@@ -347,6 +441,12 @@
             <div id="homopolymerAlert" class="hidden p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-start space-x-2 text-xs text-rose-300">
               <i class="fa-solid fa-triangle-exclamation text-rose-400 mt-0.5"></i>
               <div id="homopolymerAlertText" class="text-[11px] leading-relaxed"></div>
+            </div>
+
+            <!-- Feature 2: Pattern Repeat Alert (Di/Tri-Nucleotide Repeats) -->
+            <div id="patternRepeatAlert" class="hidden p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start space-x-2 text-xs text-amber-300">
+              <i class="fa-solid fa-repeat text-amber-400 mt-0.5"></i>
+              <div id="patternRepeatAlertText" class="text-[11px] leading-relaxed"></div>
             </div>
           </div>
 
@@ -615,12 +715,47 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <!-- PAM Motif -->
           <div>
-            <label for="pamSelect" class="block text-sm font-medium text-slate-200 mb-1.5">PAM Motif (Lock Clasp)</label>
-            <select id="pamSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="pamSelect" class="text-sm font-medium text-slate-200">PAM Motif (Lock Clasp)</label>
+              <button 
+                type="button" 
+                onclick="toggleMultiPamMatrix()" 
+                id="toggleMultiPamBtn"
+                class="text-xs text-dna-cyan hover:text-white flex items-center space-x-1 transition font-medium"
+                title="Compare fit spots across NGG, NAG, NGA, and SaCas9 PAM motifs"
+              >
+                <i class="fa-solid fa-table-cells text-dna-cyan text-[10px]"></i>
+                <span id="toggleMultiPamBtnText">Compare PAMs</span>
+              </button>
+            </div>
+            <select id="pamSelect" onchange="handlePamChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
               <option value="NGG" selected>SpCas9 Canonical (NGG)</option>
               <option value="NAG">SpCas9 Non-canonical (NAG)</option>
+              <option value="NGA">SpG / Engineered SpCas9 (NGA)</option>
               <option value="NNGRRT">SaCas9 (NNGRRT)</option>
             </select>
+          </div>
+
+          <!-- Feature 3: Multi-PAM Quick Matrix Card -->
+          <div id="multiPamMatrixCard" class="hidden col-span-1 sm:col-span-2 p-3.5 rounded-xl border border-dna-cyan/30 bg-slate-950/80 space-y-3 transition-all">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-table-cells text-dna-cyan"></i>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Multi-PAM Quick Matrix</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-mono">Head-to-head PAM clasp counts</span>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs" id="multiPamMatrixGrid">
+              <!-- Dynamically populated 4 PAM cards -->
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-400 flex items-start space-x-2">
+              <i class="fa-solid fa-circle-info text-dna-cyan mt-0.5 text-xs"></i>
+              <p id="multiPamTakeawayText" class="leading-relaxed text-[10px]">
+                Testing multiple PAM motifs reveals alternative binding clasps. While canonical SpCas9 cuts primarily at <strong>NGG</strong>, permissive clasps like <strong>NAG</strong> (~15% cutting) or engineered <strong>NGA</strong> can produce off-target cleavage at elevated Cas9 levels.
+              </p>
+            </div>
           </div>
 
           <!-- Mismatch Threshold -->
@@ -2208,6 +2343,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       renderWhatIfStrip();
       updateExpectedOutcomePreview(el.value, document.getElementById('pamSelect').value);
       initRecentRuns();
+    initPinnedKeysBar();
       updateExpectedOutcomePreview(initGrna, document.getElementById('pamSelect').value);
       renderSensitivityMap([]);
 
@@ -2276,6 +2412,21 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       // Feature 2: Live Update Rival Competition if rival is populated
       if (typeof evaluateRivalCompetition === 'function') {
         evaluateRivalCompetition();
+      }
+
+      // Feature 1: Live Update Flipped Partner if open
+      if (typeof evaluateFlippedPartner === 'function' && isFlippedPartnerOpen) {
+        evaluateFlippedPartner();
+      }
+
+      // Feature 3: Live Update Multi-PAM Matrix if open
+      if (typeof renderMultiPamMatrix === 'function' && isMultiPamOpen) {
+        renderMultiPamMatrix();
+      }
+
+      // Feature 4: Live Update Pinned Keys active indicator
+      if (typeof renderPinnedKeysBar === 'function') {
+        renderPinnedKeysBar();
       }
     }
 
@@ -3396,6 +3547,9 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       evaluateCrowdingAndCollisions(cachedHits);
       evaluateZeroMatchGaps(cachedHits);
       evaluateRivalCompetition();
+      if (typeof evaluateFlippedPartner === 'function' && isFlippedPartnerOpen) evaluateFlippedPartner();
+      if (typeof renderMultiPamMatrix === 'function' && isMultiPamOpen) renderMultiPamMatrix();
+      if (typeof renderPinnedKeysBar === 'function') renderPinnedKeysBar();
       renderTableRows();
 
       document.getElementById('pageInfo').textContent = `Showing ${(data.page-1)*pageSize + 1}-${Math.min(data.page*pageSize, data.total_hits)} of ${data.total_hits}`;
@@ -4030,6 +4184,29 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       pin.className = `absolute top-0 bottom-0 w-2.5 rounded-full shadow-lg transition-all duration-300 ${
         gcPct >= 40 && gcPct <= 60 ? 'bg-emerald-400 shadow-emerald-400/50' : (gcPct < 40 ? 'bg-amber-400 shadow-amber-400/50' : 'bg-purple-400 shadow-purple-400/50')
       }`;
+
+      // Feature 2: Check for short pattern repeats (di-nucleotide / tri-nucleotide repeats)
+      const repeatInfo = detectPatternRepeats(cleanSeq);
+      const patternBadge = document.getElementById('patternRepeatBadge');
+      const patternBadgeText = document.getElementById('patternRepeatBadgeText');
+      const patternAlert = document.getElementById('patternRepeatAlert');
+      const patternAlertText = document.getElementById('patternRepeatAlertText');
+
+      if (repeatInfo) {
+        if (patternBadge) {
+          patternBadge.classList.remove('hidden');
+          if (patternBadgeText) patternBadgeText.textContent = `Pattern Repeat (${repeatInfo.pattern})`;
+        }
+        if (patternAlert) {
+          patternAlert.classList.remove('hidden');
+          if (patternAlertText) {
+            patternAlertText.innerHTML = `<strong>⚠️ "Pattern Repeat" Warning (${repeatInfo.pattern}):</strong> Tandem ${repeatInfo.type} repeat (<strong>${repeatInfo.unit}</strong> repeated ${repeatInfo.count}&times;) detected! Repetitive sequences cause slippery RNA:DNA annealing, ambiguous cut boundaries, and hairpin breathing.`;
+          }
+        }
+      } else {
+        if (patternBadge) patternBadge.classList.add('hidden');
+        if (patternAlert) patternAlert.classList.add('hidden');
+      }
 
       // Check for homopolymer / repeated tract warnings
       const polyT = cleanSeq.match(/T{4,}/);
@@ -5746,6 +5923,353 @@ ${cachedHits.length > 10 ? `*... and ${cachedHits.length - 10} additional hit(s)
         alert('Could not copy markdown automatically. Please check browser permissions.');
       }
       document.body.removeChild(ta);
+    }
+
+  
+
+    // ========================================================================
+    // FEATURE 4: "PINNED KEYS" QUICK BAR
+    // ========================================================================
+    let pinnedKeys = [];
+
+    function initPinnedKeysBar() {
+      try {
+        const stored = localStorage.getItem('geneweaver_pinned_keys');
+        if (stored) {
+          pinnedKeys = JSON.parse(stored);
+        } else {
+          // Default initial favorite keys
+          pinnedKeys = [
+            "GAGTCCGAGCAGAAGAAGAA",
+            "CCACTGAGTTCCTCAAGGGG"
+          ];
+        }
+      } catch (e) {
+        pinnedKeys = ["GAGTCCGAGCAGAAGAAGAA"];
+      }
+      renderPinnedKeysBar();
+    }
+
+    function pinCurrentKey() {
+      const input = document.getElementById('grnaInput');
+      const seq = (input.value || '').trim().toUpperCase();
+      if (seq.length !== 20 || /[^ACGT]/.test(seq)) {
+        showToast("Cannot pin: Target key must be exactly 20 nucleotides (A, C, G, T)!");
+        return;
+      }
+
+      if (pinnedKeys.includes(seq)) {
+        showToast("Key is already pinned in the quick bar!");
+        return;
+      }
+
+      if (pinnedKeys.length >= 4) {
+        // Shift oldest key
+        const removed = pinnedKeys.shift();
+        pinnedKeys.push(seq);
+        showToast(`Pinned ${seq.substring(0, 8)}... (Replaced oldest pinned key)`);
+      } else {
+        pinnedKeys.push(seq);
+        showToast(`Pinned favorite key: ${seq.substring(0, 8)}...`);
+      }
+
+      try {
+        localStorage.setItem('geneweaver_pinned_keys', JSON.stringify(pinnedKeys));
+      } catch (e) {}
+
+      renderPinnedKeysBar();
+    }
+
+    function unpinKey(seq, event) {
+      if (event) event.stopPropagation();
+      pinnedKeys = pinnedKeys.filter(k => k !== seq);
+      try {
+        localStorage.setItem('geneweaver_pinned_keys', JSON.stringify(pinnedKeys));
+      } catch (e) {}
+      renderPinnedKeysBar();
+      showToast(`Unpinned key ${seq.substring(0, 8)}...`);
+    }
+
+    function loadPinnedKey(seq) {
+      const input = document.getElementById('grnaInput');
+      if (input) {
+        input.value = seq;
+        handleGrnaInput(input);
+        showToast(`Loaded pinned key: ${seq}`);
+        submitAlignmentJob();
+      }
+    }
+
+    function renderPinnedKeysBar() {
+      const container = document.getElementById('pinnedKeysList');
+      if (!container) return;
+
+      if (!pinnedKeys || pinnedKeys.length === 0) {
+        container.innerHTML = '<span class="text-[10px] text-slate-500 italic">No pinned keys yet. Click "Pin Key" to save up to 4 favorites.</span>';
+        return;
+      }
+
+      const activeSeq = (document.getElementById('grnaInput')?.value || '').trim().toUpperCase();
+
+      container.innerHTML = pinnedKeys.map(k => {
+        const isActive = (k === activeSeq);
+        return `
+          <div 
+            onclick="loadPinnedKey('${k}')" 
+            class="px-2 py-0.5 rounded-lg border text-xs font-mono flex items-center space-x-1.5 cursor-pointer transition select-none ${
+              isActive 
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/10' 
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-600'
+            }"
+            title="Click to load: ${k}"
+          >
+            <span class="font-bold text-[11px]">${k.substring(0, 6)}...${k.substring(16)}</span>
+            <button 
+              type="button" 
+              onclick="unpinKey('${k}', event)" 
+              class="text-slate-500 hover:text-rose-400 text-[10px] ml-0.5 p-0.5 transition"
+              title="Remove from pinned bar"
+            >
+              &times;
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ========================================================================
+    // FEATURE 1: "FLIPPED PARTNER" (REVERSE-COMPLEMENT) CHECK
+    // ========================================================================
+    let isFlippedPartnerOpen = false;
+
+    function toggleFlippedPartner() {
+      isFlippedPartnerOpen = !isFlippedPartnerOpen;
+      const card = document.getElementById('flippedPartnerCard');
+      const icon = document.getElementById('flippedToggleIcon');
+      if (card) {
+        if (isFlippedPartnerOpen) {
+          card.classList.remove('hidden');
+          if (icon) icon.className = "fa-solid fa-arrows-rotate text-dna-cyan text-[11px] fa-spin";
+          setTimeout(() => { if (icon) icon.className = "fa-solid fa-arrows-rotate text-dna-cyan text-[11px]"; }, 500);
+          evaluateFlippedPartner();
+        } else {
+          card.classList.add('hidden');
+        }
+      }
+    }
+
+    function getReverseComplement(dna) {
+      const complement = { 'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C', 'N': 'N', 'U': 'A' };
+      return dna.toUpperCase().split('').reverse().map(b => complement[b] || 'N').join('');
+    }
+
+    function evaluateFlippedPartner() {
+      const card = document.getElementById('flippedPartnerCard');
+      if (!card || !isFlippedPartnerOpen) return;
+
+      const activeSeq = (document.getElementById('grnaInput')?.value || '').trim().toUpperCase();
+      const flippedSeq = getReverseComplement(activeSeq);
+
+      const activeEl = document.getElementById('flippedActiveKeySeq');
+      const flippedEl = document.getElementById('flippedPartnerSeq');
+      const hitCountEl = document.getElementById('flippedHitCount');
+      const exactCountEl = document.getElementById('flippedExactCount');
+      const highCountEl = document.getElementById('flippedHighCount');
+      const badge = document.getElementById('flippedPartnerStatusBadge');
+      const expText = document.getElementById('flippedExplanationText');
+
+      if (activeEl) activeEl.textContent = activeSeq;
+      if (flippedEl) flippedEl.textContent = flippedSeq;
+
+      if (activeSeq.length !== 20) {
+        if (hitCountEl) hitCountEl.textContent = "--";
+        return;
+      }
+
+      const pam = document.getElementById('pamSelect')?.value || "NGG";
+      const mm = parseInt(document.getElementById('mismatchRange')?.value, 10) || 3;
+      const fastaText = document.getElementById('targetFasta')?.value || "";
+
+      // Scan reference genome with the flipped partner
+      const flippedAlign = runClientSideAlignment(flippedSeq, pam, mm, fastaText);
+      const fHits = flippedAlign.hits || [];
+      const fExact = fHits.filter(h => h.mismatches === 0).length;
+      const fHigh = fHits.filter(h => h.cleavage_tier === "High").length;
+
+      if (hitCountEl) hitCountEl.textContent = fHits.length;
+      if (exactCountEl) exactCountEl.textContent = fExact;
+      if (highCountEl) {
+        highCountEl.textContent = fHigh;
+        highCountEl.className = fHigh > 0 ? "text-rose-400 font-bold" : "text-emerald-400 font-bold";
+      }
+
+      if (badge) {
+        if (fHits.length === 0) {
+          badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+          badge.textContent = "Inert Flipped Partner (0 Hits)";
+        } else if (fExact > 0 || fHigh > 0) {
+          badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse";
+          badge.textContent = `Accidental Binding Alert (${fHits.length} Fits, ${fHigh} High Risk)`;
+        } else {
+          badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40";
+          badge.textContent = `Tolerated Mismatches (${fHits.length} Fits)`;
+        }
+      }
+
+      if (expText) {
+        if (fHits.length === 0) {
+          expText.innerHTML = `
+            <strong class="text-emerald-400">Zero Accidental Binding:</strong> The flipped partner (<strong class="mono text-dna-cyan">${flippedSeq}</strong>) has 0 complementary binding locks with PAM clasps in the reference genome. This proves the key operates unidirectionally with zero inverted antisense cross-reactivity.
+          `;
+        } else if (fExact > 0 || fHigh > 0) {
+          expText.innerHTML = `
+            <strong class="text-rose-400">Accidental Reverse Fit Detected!</strong> The flipped partner (<strong class="mono text-dna-cyan">${flippedSeq}</strong>) finds <strong>${fHits.length} genomic hit(s)</strong> (${fHigh} high-risk look-alikes). If inverted DNA segments or dual-strand cassettes exist, Cas9 could bind or cut the reverse strand at unintended positions.
+          `;
+        } else {
+          expText.innerHTML = `
+            <strong class="text-amber-400">Weak Flipped Fit:</strong> Found ${fHits.length} weak/permissive match(es) for the flipped partner with multiple mismatches. Unlikely to cause strong off-target cleavage under standard enzyme conditions.
+          `;
+        }
+      }
+    }
+
+    function loadFlippedAsActiveKey() {
+      const activeSeq = (document.getElementById('grnaInput')?.value || '').trim().toUpperCase();
+      const flippedSeq = getReverseComplement(activeSeq);
+      const input = document.getElementById('grnaInput');
+      if (input && flippedSeq.length === 20) {
+        input.value = flippedSeq;
+        handleGrnaInput(input);
+        showToast(`Loaded flipped partner into active target box: ${flippedSeq}`);
+        submitAlignmentJob();
+      }
+    }
+
+    // ========================================================================
+    // FEATURE 2: PATTERN REPEAT CHECK HELPER
+    // ========================================================================
+    function detectPatternRepeats(seq) {
+      if (!seq || seq.length < 6) return null;
+      
+      // Dinucleotide repeats (length >= 6, e.g. ATATAT, CGCGCG)
+      const dinucs = ['AT', 'TA', 'CG', 'GC', 'AC', 'CA', 'TG', 'GT', 'AG', 'GA', 'CT', 'TC'];
+      for (const d of dinucs) {
+        const re = new RegExp(`(${d}){3,}`, 'g');
+        const m = seq.match(re);
+        if (m) {
+          return { type: 'dinucleotide', pattern: m[0], unit: d, count: m[0].length / 2 };
+        }
+      }
+
+      // Trinucleotide repeats (length >= 6 or 9, e.g. CAGCAGCAG)
+      const trinucMatch = seq.match(/([ACGT]{3})\1{1,}/);
+      if (trinucMatch) {
+        return { type: 'trinucleotide', pattern: trinucMatch[0], unit: trinucMatch[1], count: trinucMatch[0].length / 3 };
+      }
+
+      return null;
+    }
+
+    // ========================================================================
+    // FEATURE 3: MULTI-PAM QUICK MATRIX
+    // ========================================================================
+    let isMultiPamOpen = false;
+
+    function toggleMultiPamMatrix() {
+      isMultiPamOpen = !isMultiPamOpen;
+      const card = document.getElementById('multiPamMatrixCard');
+      const text = document.getElementById('toggleMultiPamBtnText');
+      if (card) {
+        if (isMultiPamOpen) {
+          card.classList.remove('hidden');
+          if (text) text.textContent = "Hide PAM Matrix";
+          renderMultiPamMatrix();
+        } else {
+          card.classList.add('hidden');
+          if (text) text.textContent = "Compare PAMs";
+        }
+      }
+    }
+
+    function handlePamChange() {
+      if (isMultiPamOpen) renderMultiPamMatrix();
+    }
+
+    function selectPamFromMatrix(pamCode) {
+      const select = document.getElementById('pamSelect');
+      if (select) {
+        select.value = pamCode;
+        showToast(`Switched PAM motif to: ${pamCode}`);
+        submitAlignmentJob();
+        if (isMultiPamOpen) renderMultiPamMatrix();
+      }
+    }
+
+    function renderMultiPamMatrix() {
+      const card = document.getElementById('multiPamMatrixCard');
+      const grid = document.getElementById('multiPamMatrixGrid');
+      if (!card || !grid || !isMultiPamOpen) return;
+
+      const guide = (document.getElementById('grnaInput')?.value || '').trim().toUpperCase();
+      const currentPam = document.getElementById('pamSelect')?.value || "NGG";
+      const mm = parseInt(document.getElementById('mismatchRange')?.value, 10) || 3;
+      const fastaText = document.getElementById('targetFasta')?.value || "";
+
+      const pamVariants = [
+        { name: "SpCas9 Canonical", code: "NGG", tag: "Canonical NGG", desc: "100% Clasp Efficiency", border: "border-emerald-500/40", textCol: "text-emerald-400" },
+        { name: "SpCas9 Non-canonical", code: "NAG", tag: "Alternative NAG", desc: "~15% Weak Affinity", border: "border-amber-500/40", textCol: "text-amber-400" },
+        { name: "Engineered SpG / SpRY", code: "NGA", tag: "Expanded NGA", desc: "~60% Relaxed Clasp", border: "border-dna-cyan/40", textCol: "text-dna-cyan" },
+        { name: "SaCas9 Staphylococcus", code: "NNGRRT", tag: "SaCas9 NNGRRT", desc: "Dual Purine Lock", border: "border-purple-500/40", textCol: "text-purple-400" }
+      ];
+
+      grid.innerHTML = pamVariants.map(pv => {
+        // Run quick client-side scan for this PAM
+        const alignResult = runClientSideAlignment(guide, pv.code, mm, fastaText);
+        const hits = alignResult.hits || [];
+        const exact = hits.filter(h => h.mismatches === 0).length;
+        const high = hits.filter(h => h.cleavage_tier === "High").length;
+        const isSelected = (pv.code === currentPam);
+
+        return `
+          <div class="p-3 rounded-xl bg-slate-900 border ${isSelected ? pv.border + ' ring-1 ring-dna-cyan/40' : 'border-slate-800'} flex flex-col justify-between space-y-2 select-none">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono font-bold text-xs ${pv.textCol}">${pv.code}</span>
+                ${isSelected ? '<span class="text-[9px] font-bold text-dna-cyan bg-dna-cyan/20 px-1.5 py-0.2 rounded border border-dna-cyan/30">ACTIVE</span>' : ''}
+              </div>
+              <div class="text-[11px] font-semibold text-white truncate">${pv.name}</div>
+              <div class="text-[9px] text-slate-500">${pv.desc}</div>
+            </div>
+
+            <div class="space-y-1 pt-1.5 border-t border-slate-800 text-[11px]">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Total Fit Spots:</span>
+                <strong class="text-white font-mono">${hits.length}</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Exact Locks (0 mm):</span>
+                <strong class="${exact > 0 ? 'text-emerald-400 font-bold' : 'text-slate-500'} font-mono">${exact}</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">High-Risk Look-Alikes:</span>
+                <strong class="${high > 0 ? 'text-rose-400 font-bold' : 'text-emerald-400'} font-mono">${high}</strong>
+              </div>
+            </div>
+
+            <button 
+              type="button" 
+              onclick="selectPamFromMatrix('${pv.code}')" 
+              class="w-full py-1 text-[10px] font-bold rounded-lg transition ${
+                isSelected 
+                  ? 'bg-slate-800 text-slate-400 cursor-default' 
+                  : 'bg-slate-800 hover:bg-slate-700 text-dna-cyan border border-slate-700 hover:border-dna-cyan/40'
+              }"
+            >
+              ${isSelected ? 'Currently Selected' : `Select ${pv.code}`}
+            </button>
+          </div>
+        `;
+      }).join('');
     }
 
   </script>
