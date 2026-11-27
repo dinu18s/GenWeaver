@@ -307,16 +307,47 @@
             <input 
               type="text" 
               id="grnaInput" 
-              maxlength="20"
+              maxlength="100"
               placeholder="e.g. GAGTCCGAGCAGAAGAAGAA" 
               value="GAGTCCGAGCAGAAGAAGAA"
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-base mono tracking-widest text-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 uppercase placeholder-slate-600 transition"
               oninput="handleGrnaInput(this)"
+              onpaste="handleGrnaPaste(event)"
             />
-            <div id="grnaStatusIcon" class="absolute right-3 top-3.5 text-emerald-400">
-              <i class="fa-solid fa-circle-check"></i>
+            <div class="absolute right-3 top-3.5 flex items-center space-x-1.5">
+              <button 
+                type="button" 
+                id="inlineCleanBroomBtn"
+                onclick="cleanGrnaInput()" 
+                class="hidden p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-400 transition"
+                title="One-click strip numbers, spaces, and line breaks"
+              >
+                <i class="fa-solid fa-broom text-xs text-amber-400"></i>
+              </button>
+              <div id="grnaStatusIcon" class="text-emerald-400">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
             </div>
           </div>
+
+          <!-- Feature 4: Inline Input Cleaner & Line-Break Stripper Helper Pill -->
+          <div id="cleanInputPillContainer" class="hidden mt-1.5 p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 transition-all">
+            <div class="flex items-center space-x-2 text-xs text-amber-300">
+              <i class="fa-solid fa-broom text-amber-400 text-sm"></i>
+              <span id="cleanInputHelperText" class="text-[11px] leading-tight">Accidental spaces, numbers, or line breaks detected in pasted text.</span>
+            </div>
+            <button 
+              type="button" 
+              onclick="cleanGrnaInput()" 
+              id="cleanInputHelperPill"
+              class="px-2.5 py-1 text-xs rounded-lg bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 border border-amber-500/50 transition font-semibold flex items-center space-x-1.5 shadow-sm shadow-amber-500/20 whitespace-nowrap"
+              title="Strip invalid characters and format into clean 20-nt"
+            >
+              <span>Clean to 20-nt</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+
           <p class="text-xs text-slate-500 mt-1.5">Rule: Must be exactly 20 letters using only nucleotides A, C, G, T.</p>
 
           <div class="mt-2 flex items-center justify-between">
@@ -771,7 +802,7 @@
               max="6" 
               value="3" 
               class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500 mt-2"
-              oninput="document.getElementById('mismatchValBadge').textContent = this.value + ' mm'"
+              oninput="document.getElementById('mismatchValBadge').textContent = this.value + ' mm'; if (typeof updateParameterDiffStrip === 'function') updateParameterDiffStrip();"
             />
             <div class="flex justify-between text-[10px] text-slate-500 px-1 mt-1">
               <span>0 (Exact)</span>
@@ -1014,6 +1045,37 @@
                 <span>Load Sample Guardrail (TP53 / Homolog)</span>
               </button>
             </div>
+          </div>
+        </div>
+
+                <!-- Feature 2: Live "What Changed" Parameter Diff Strip -->
+        <div id="parameterDiffStrip" class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all shadow-md">
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="flex items-center space-x-1.5 text-slate-300 font-semibold">
+              <i class="fa-solid fa-sliders text-dna-cyan text-xs"></i>
+              <span>Parameter State:</span>
+            </span>
+            <div id="diffBadgesContainer" class="flex flex-wrap items-center gap-1.5">
+              <span id="diffDefaultTag" class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <i class="fa-solid fa-check text-[9px] mr-1"></i>All Default Parameters (GAGTCC... | NGG | 3 mm | Balanced)
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2 text-xs shrink-0 self-end sm:self-auto">
+            <span id="diffCountBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
+              0 Modified
+            </span>
+            <button 
+              type="button" 
+              id="resetDiffBtn"
+              onclick="resetParametersToDefaults()" 
+              class="hidden px-2.5 py-1 text-[11px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center space-x-1 shadow-sm"
+              title="Reset target key, PAM, mismatch allowance, and strictness back to factory defaults"
+            >
+              <i class="fa-solid fa-rotate-left text-amber-400 text-[10px]"></i>
+              <span>Reset to Defaults</span>
+            </button>
           </div>
         </div>
 
@@ -1602,8 +1664,17 @@
 
           <!-- Filters & Actions with Feature 4: Export Summary Report -->
           <div id="tableToolbarActions" class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+            <!-- Feature 3: Custom Hit Ranker -->
+            <select id="sortHitsSelect" onchange="applySortAndFilters()" class="bg-slate-950 border border-dna-cyan/40 rounded-lg px-2.5 py-1.5 text-xs text-dna-cyan font-medium focus:outline-none focus:ring-1 focus:ring-dna-cyan">
+              <option value="mismatches_asc" selected>Sort: Fewest Mismatches First</option>
+              <option value="score_desc">Sort: Highest MIT Specificity First</option>
+              <option value="cfd_desc">Sort: Highest Cutting Risk (CFD First)</option>
+              <option value="pos_asc">Sort: Genomic Position (5' &rarr; 3')</option>
+              <option value="locus_asc">Sort: Locus Name (A &rarr; Z)</option>
+            </select>
+
             <!-- Filter by Tier -->
-            <select id="filterTier" onchange="applyFilters()" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200">
+            <select id="filterTier" onchange="applySortAndFilters()" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200">
               <option value="">All Tiers</option>
               <option value="High">High Risk Only</option>
               <option value="Medium">Medium Risk Only</option>
@@ -2344,6 +2415,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       updateExpectedOutcomePreview(el.value, document.getElementById('pamSelect').value);
       initRecentRuns();
     initPinnedKeysBar();
+    updateParameterDiffStrip();
       updateExpectedOutcomePreview(initGrna, document.getElementById('pamSelect').value);
       renderSensitivityMap([]);
 
@@ -2427,6 +2499,16 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       // Feature 4: Live Update Pinned Keys active indicator
       if (typeof renderPinnedKeysBar === 'function') {
         renderPinnedKeysBar();
+      }
+
+      // Feature 2: Live Update Parameter Diff Strip
+      if (typeof updateParameterDiffStrip === 'function') {
+        updateParameterDiffStrip();
+      }
+
+      // Feature 4: Check for dirty input / formatting slips
+      if (typeof checkForDirtyInput === 'function') {
+        checkForDirtyInput(el.value);
       }
     }
 
@@ -3544,6 +3626,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
       evaluateForbiddenZones(cachedHits);
       renderSensitivityMap(cachedHits);
       updateShiftedAlertBanner();
+      evaluateEdgeProximity(cachedHits);
       evaluateCrowdingAndCollisions(cachedHits);
       evaluateZeroMatchGaps(cachedHits);
       evaluateRivalCompetition();
@@ -3757,6 +3840,7 @@ GAATCCGAGCAGAAGAAGTAGGGCGGGGCCCGGGCGCCCCTCCTCCTGGCCCTGCCGGCC`;
           <td class="px-4 py-3 text-slate-400 font-mono text-[11px]">
             <div>${hit.start_pos} - ${hit.end_pos}</div>
             ${hit.isCollision ? '<span class="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono mt-0.5" title="Direct steric overlap (<23 bp)"><i class="fa-solid fa-arrows-to-circle text-[8px]"></i><span>Collision (<23 bp)</span></span>' : (hit.isCrowded ? `<span class="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[9px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono mt-0.5" title="Close proximity neighbor within 60 bp"><i class="fa-solid fa-people-arrows text-[8px]"></i><span>Crowded (${hit.closestDist} bp)</span></span>` : '')}
+            ${hit.isEdgeProximity ? `<span class="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[9px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono mt-0.5" title="${hit.edgeWarning}"><i class="fa-solid fa-border-all text-[8px] text-amber-400"></i><span>Edge Context (${hit.edgeDistance} bp from ${hit.edgeEnd})</span></span>` : ''}
           </td>
           <td class="px-3 py-3 text-center">
             <div class="flex flex-col items-center space-y-1">
@@ -6193,6 +6277,7 @@ ${cachedHits.length > 10 ? `*... and ${cachedHits.length - 10} additional hit(s)
 
     function handlePamChange() {
       if (isMultiPamOpen) renderMultiPamMatrix();
+      if (typeof updateParameterDiffStrip === 'function') updateParameterDiffStrip();
     }
 
     function selectPamFromMatrix(pamCode) {
@@ -6270,6 +6355,256 @@ ${cachedHits.length > 10 ? `*... and ${cachedHits.length - 10} additional hit(s)
           </div>
         `;
       }).join('');
+    }
+
+  
+
+    // ========================================================================
+    // FEATURE 1: EDGE-PROXIMITY & BOUNDARY WARNING EVALUATOR
+    // ========================================================================
+    function evaluateEdgeProximity(hits) {
+      if (!hits || hits.length === 0) return;
+
+      const fastaRecords = lastParsedFastaRecords || [];
+      const recLengthMap = {};
+      fastaRecords.forEach(r => {
+        recLengthMap[r.header] = r.seq ? r.seq.length : 0;
+      });
+
+      hits.forEach(h => {
+        const totalLen = recLengthMap[h.target_name] || 0;
+        h.isEdgeProximity = false;
+        h.edgeDistance = 9999;
+        h.edgeEnd = "";
+        h.edgeWarning = "";
+
+        if (totalLen > 0) {
+          const dist5Prime = Math.max(0, h.start_pos - 1);
+          const dist3Prime = Math.max(0, totalLen - h.end_pos);
+
+          if (dist5Prime <= 15) {
+            h.isEdgeProximity = true;
+            h.edgeDistance = dist5Prime;
+            h.edgeEnd = "5' Start";
+            h.edgeWarning = `Edge Boundary: Hit sits within ${dist5Prime} bp of 5' start; flanking genomic context truncated`;
+          } else if (dist3Prime <= 15) {
+            h.isEdgeProximity = true;
+            h.edgeDistance = dist3Prime;
+            h.edgeEnd = "3' End";
+            h.edgeWarning = `Edge Boundary: Hit sits within ${dist3Prime} bp of 3' terminus; flanking genomic context truncated`;
+          }
+        }
+      });
+    }
+
+    // ========================================================================
+    // FEATURE 2: LIVE "WHAT CHANGED" PARAMETER DIFF STRIP
+    // ========================================================================
+    const FACTORY_DEFAULTS = {
+      grna: "GAGTCCGAGCAGAAGAAGAA",
+      pam: "NGG",
+      mm: "3",
+      strictness: "balanced"
+    };
+
+    function updateParameterDiffStrip() {
+      const container = document.getElementById('diffBadgesContainer');
+      const countBadge = document.getElementById('diffCountBadge');
+      const resetBtn = document.getElementById('resetDiffBtn');
+      if (!container) return;
+
+      const curGrna = (document.getElementById('grnaInput')?.value || '').trim().toUpperCase();
+      const curPam = document.getElementById('pamSelect')?.value || "NGG";
+      const curMm = document.getElementById('mismatchRange')?.value || "3";
+      const curStrictness = currentStrictnessMode || "balanced";
+
+      const diffs = [];
+
+      if (curGrna !== FACTORY_DEFAULTS.grna) {
+        diffs.push({
+          label: "Target Key",
+          val: `${curGrna.substring(0, 6)}... (${curGrna.length} nt)`,
+          defaultVal: FACTORY_DEFAULTS.grna.substring(0, 6) + "...",
+          color: "bg-brand-500/20 text-brand-300 border-brand-500/40"
+        });
+      }
+
+      if (curPam !== FACTORY_DEFAULTS.pam) {
+        diffs.push({
+          label: "PAM Clasp",
+          val: curPam,
+          defaultVal: FACTORY_DEFAULTS.pam,
+          color: "bg-purple-500/20 text-purple-300 border-purple-500/40"
+        });
+      }
+
+      if (curMm !== FACTORY_DEFAULTS.mm) {
+        diffs.push({
+          label: "Tolerance",
+          val: `${curMm} mm`,
+          defaultVal: `${FACTORY_DEFAULTS.mm} mm`,
+          color: "bg-amber-500/20 text-amber-300 border-amber-500/40"
+        });
+      }
+
+      if (curStrictness !== FACTORY_DEFAULTS.strictness) {
+        diffs.push({
+          label: "Strictness",
+          val: curStrictness === 'strict' ? 'Strict Seed' : (curStrictness === 'lenient' ? 'Lenient Scan' : curStrictness),
+          defaultVal: "Balanced",
+          color: "bg-dna-cyan/20 text-dna-cyan border-dna-cyan/40"
+        });
+      }
+
+      if (diffs.length === 0) {
+        container.innerHTML = `
+          <span id="diffDefaultTag" class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+            <i class="fa-solid fa-check text-[9px] mr-1"></i>All Default Parameters (GAGTCC... | NGG | 3 mm | Balanced)
+          </span>
+        `;
+        if (countBadge) countBadge.classList.add('hidden');
+        if (resetBtn) resetBtn.classList.add('hidden');
+      } else {
+        container.innerHTML = diffs.map(d => `
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono border ${d.color} flex items-center space-x-1" title="Default: ${d.defaultVal}">
+            <strong class="font-bold">${d.label}:</strong>
+            <span>${d.val}</span>
+          </span>
+        `).join('');
+
+        if (countBadge) {
+          countBadge.classList.remove('hidden');
+          countBadge.textContent = `${diffs.length} Modified`;
+        }
+        if (resetBtn) resetBtn.classList.remove('hidden');
+      }
+    }
+
+    function resetParametersToDefaults() {
+      const grnaInput = document.getElementById('grnaInput');
+      const pamSelect = document.getElementById('pamSelect');
+      const mmRange = document.getElementById('mismatchRange');
+
+      if (grnaInput) grnaInput.value = FACTORY_DEFAULTS.grna;
+      if (pamSelect) pamSelect.value = FACTORY_DEFAULTS.pam;
+      if (mmRange) {
+        mmRange.value = FACTORY_DEFAULTS.mm;
+        const mmBadge = document.getElementById('mismatchValBadge');
+        if (mmBadge) mmBadge.textContent = FACTORY_DEFAULTS.mm + ' mm';
+      }
+
+      applyStrictnessMode('balanced');
+      if (grnaInput) handleGrnaInput(grnaInput);
+      updateParameterDiffStrip();
+      showToast("Reset all parameters to factory defaults (20-nt gRNA, NGG, 3 mm, Balanced)!");
+      submitAlignmentJob();
+    }
+
+    // ========================================================================
+    // FEATURE 3: CUSTOM HIT RANKER & FILTER MANAGER
+    // ========================================================================
+    let currentSortMode = "mismatches_asc";
+
+    function applySortAndFilters() {
+      currentPage = 1;
+      const sortSelect = document.getElementById('sortHitsSelect');
+      if (sortSelect) currentSortMode = sortSelect.value;
+
+      const tier = document.getElementById('filterTier')?.value || "";
+
+      // Sort cachedHits according to currentSortMode
+      cachedHits.sort((a, b) => {
+        if (currentSortMode === "mismatches_asc") {
+          return (a.mismatches - b.mismatches) || (b.mit_score - a.mit_score) || (b.cfd_score - a.cfd_score);
+        } else if (currentSortMode === "score_desc") {
+          return (b.mit_score - a.mit_score) || (b.cfd_score - a.cfd_score) || (a.mismatches - b.mismatches);
+        } else if (currentSortMode === "cfd_desc") {
+          return (b.cfd_score - a.cfd_score) || (b.mit_score - a.mit_score) || (a.mismatches - b.mismatches);
+        } else if (currentSortMode === "pos_asc") {
+          return (a.start_pos - b.start_pos);
+        } else if (currentSortMode === "locus_asc") {
+          return a.target_name.localeCompare(b.target_name) || (a.start_pos - b.start_pos);
+        }
+        return 0;
+      });
+
+      let filtered = cachedHits;
+      if (tier) {
+        filtered = cachedHits.filter(h => h.cleavage_tier === tier);
+      }
+
+      renderResults({
+        hits: filtered,
+        total_hits: filtered.length,
+        page: 1,
+        page_size: pageSize,
+        total_pages: Math.max(1, Math.ceil(filtered.length / pageSize))
+      });
+    }
+
+    // ========================================================================
+    // FEATURE 4: INLINE INPUT CLEANER & LINE-BREAK STRIPPER
+    // ========================================================================
+    function handleGrnaPaste(e) {
+      setTimeout(() => {
+        const input = document.getElementById('grnaInput');
+        if (input) checkForDirtyInput(input.value);
+      }, 50);
+    }
+
+    function checkForDirtyInput(rawVal) {
+      const pill = document.getElementById('cleanInputPillContainer');
+      const broom = document.getElementById('inlineCleanBroomBtn');
+      const text = document.getElementById('cleanInputHelperText');
+
+      if (!rawVal) {
+        if (pill) pill.classList.add('hidden');
+        if (broom) broom.classList.add('hidden');
+        return;
+      }
+
+      // Check for whitespace, digits, line breaks, or length > 20
+      const hasSpaces = /\s/.test(rawVal);
+      const hasDigits = /\d/.test(rawVal);
+      const hasLineBreaks = /[\r\n]/.test(rawVal);
+      const isOversized = rawVal.length > 20;
+      const hasInvalidChars = /[^acgtuACGTU]/.test(rawVal);
+
+      if (hasSpaces || hasDigits || hasLineBreaks || isOversized || hasInvalidChars) {
+        if (pill) pill.classList.remove('hidden');
+        if (broom) broom.classList.remove('hidden');
+        if (text) {
+          const reasons = [];
+          if (hasLineBreaks) reasons.push("line breaks");
+          if (hasSpaces) reasons.push("spaces");
+          if (hasDigits) reasons.push("position numbers");
+          if (isOversized) reasons.push("oversized sequence");
+          text.innerHTML = `Found formatting slips (<strong>${reasons.join(', ')}</strong>). Click to clean immediately:`;
+        }
+      } else {
+        if (pill) pill.classList.add('hidden');
+        if (broom) broom.classList.add('hidden');
+      }
+    }
+
+    function cleanGrnaInput() {
+      const input = document.getElementById('grnaInput');
+      if (!input) return;
+
+      const raw = input.value;
+      const cleaned = raw.replace(/[^acgtuACGTU]/g, '').toUpperCase().substring(0, 20);
+
+      input.value = cleaned;
+      input.maxLength = 20;
+
+      const pill = document.getElementById('cleanInputPillContainer');
+      const broom = document.getElementById('inlineCleanBroomBtn');
+      if (pill) pill.classList.add('hidden');
+      if (broom) broom.classList.add('hidden');
+
+      handleGrnaInput(input);
+      showToast(`Cleaned to 20-nt: stripped numbers, spaces & line breaks! (${cleaned})`);
+      submitAlignmentJob();
     }
 
   </script>
