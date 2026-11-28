@@ -1,0 +1,21 @@
+{
+  "name": "geneweaver",
+  "version": "1.0.0",
+  "description": "GPU-Accelerated CRISPR Alignment & Off-Target Risk Engine",
+  "scripts": {
+    "dev": "python main.py",
+    "start": "python main.py",
+    "test": "python -m pytest tests/ -v",
+    "benchmark": "python benchmarks/gpu_vs_cpu.py"
+  },
+  "keywords": [
+    "crispr",
+    "cas9",
+    "bioinformatics",
+    "pytorch",
+    "fastapi",
+    "gpu-acceleration"
+  ],
+  "author": "GeneWeaver Team",
+  "license": "MIT"
+}
